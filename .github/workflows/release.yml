@@ -1,0 +1,264 @@
+name: Build & Release
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Trigger: push a tag like v0.1.0 → builds APK + 3 desktop installers →
+#          creates a GitHub Release with all 4 files attached automatically.
+#
+# How to trigger:
+#   git tag v0.1.0
+#   git push origin v0.1.0
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # needed to create GitHub Releases and upload assets
+
+jobs:
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 1 — Android APK (debug-signed, ready for sideloading)
+  # ══════════════════════════════════════════════════════════════════════════
+  build-android:
+    name: 🤖 Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Get pnpm store path
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Vite web app
+        run: pnpm build
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform 34
+        run: echo "y" | sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Add Capacitor Android platform
+        run: npx cap add android
+
+      - name: Sync Capacitor (copies dist/ into Android project)
+        run: npx cap sync android
+
+      - name: Make Gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        run: cd android && ./gradlew assembleDebug --no-daemon
+        # Debug APK is automatically signed with a debug keystore —
+        # users can install it on Android with "Install unknown apps" enabled.
+        # For a Play Store release APK, see the README for keystore setup.
+
+      - name: Rename APK with version tag
+        run: |
+          VERSION="${{ github.ref_name }}"
+          mv android/app/build/outputs/apk/debug/app-debug.apk \
+             android/app/build/outputs/apk/debug/AcadFlow-${VERSION}-android.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: android/app/build/outputs/apk/debug/AcadFlow-*.apk
+          retention-days: 7
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 2 — Desktop builds (Windows EXE / Linux AppImage / macOS DMG)
+  #         Run in parallel across 3 runners via matrix strategy
+  # ══════════════════════════════════════════════════════════════════════════
+  build-desktop:
+    name: 🖥️ ${{ matrix.name }}
+    strategy:
+      fail-fast: false   # if one platform fails, keep building the others
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            build_flag: --win
+            artifact_name: windows-exe
+            artifact_path: release-builds/*.exe
+
+          - name: Linux
+            os: ubuntu-latest
+            build_flag: --linux
+            artifact_name: linux-appimage
+            artifact_path: release-builds/*.AppImage
+
+          - name: macOS
+            os: macos-latest
+            build_flag: --mac
+            artifact_name: macos-dmg
+            artifact_path: release-builds/*.dmg
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Get pnpm store path (Unix)
+        if: runner.os != 'Windows'
+        id: pnpm-cache-unix
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Get pnpm store path (Windows)
+        if: runner.os == 'Windows'
+        id: pnpm-cache-win
+        run: echo "STORE_PATH=$(pnpm store path)" >> $env:GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache-unix.outputs.STORE_PATH || steps.pnpm-cache-win.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Linux: install native deps needed by electron-builder for AppImage
+      - name: Install Linux build deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
+
+      - name: Build Vite web app
+        run: pnpm build
+
+      - name: Build Electron app — ${{ matrix.name }}
+        run: pnpm exec electron-builder ${{ matrix.build_flag }} --publish never
+        env:
+          # Provide GH_TOKEN so electron-builder can optionally auto-publish,
+          # but we pass --publish never so we control the release ourselves.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          retention-days: 7
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB 3 — Create GitHub Release and attach all 4 artifacts
+  #         Runs after all build jobs complete successfully
+  # ══════════════════════════════════════════════════════════════════════════
+  release:
+    name: 🚀 GitHub Release
+    needs: [build-android, build-desktop]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (for release notes)
+        uses: actions/checkout@v4
+
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: artifacts/android
+
+      - name: Download Windows EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-exe
+          path: artifacts/windows
+
+      - name: Download Linux AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-appimage
+          path: artifacts/linux
+
+      - name: Download macOS DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: artifacts/macos
+
+      - name: List all artifacts (debug)
+        run: find artifacts/ -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: AcadFlow ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          body: |
+            ## AcadFlow ${{ github.ref_name }} 🦉
+
+            > Your semester, under control.
+
+            ---
+
+            ### 📥 Downloads
+
+            | Platform | File | Instructions |
+            |---|---|---|
+            | 🤖 **Android** | `AcadFlow-${{ github.ref_name }}-android.apk` | Enable **Settings → Install unknown apps**, then open the APK |
+            | 🪟 **Windows** | `AcadFlow-Setup-*.exe` | Run the installer, click through the wizard |
+            | 🐧 **Linux** | `AcadFlow-*.AppImage` | `chmod +x AcadFlow-*.AppImage` then double-click or run it |
+            | 🍎 **macOS** | `AcadFlow-*.dmg` | Open DMG, drag AcadFlow to Applications |
+
+            ---
+
+            ### ⚠️ Notes
+            - **Android APK** is debug-signed. Android will warn "installed from unknown source" — that's normal for APKs not from Play Store. It is safe.
+            - **macOS**: if you see "unidentified developer" warning, right-click the app → Open → Open anyway (Apple Gatekeeper).
+            - **Linux**: AppImage requires FUSE. Most distros have it. If not: `sudo apt install fuse libfuse2`.
+
+            ---
+
+            Built from commit `${{ github.sha }}`
+          files: |
+            artifacts/android/*.apk
+            artifacts/windows/*.exe
+            artifacts/linux/*.AppImage
+            artifacts/macos/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Custom Properties ───────────────────────────────────────────────── */
+:root {
+  /* Light Mode (RGB formats) */
+  --color-primary:    108 99 255;  /* #6C63FF */
+  --color-accent:     0 245 212;   /* #00F5D4 */
+  --color-danger:     255 71 87;   /* #FF4757 */
+  --color-warning:    255 165 2;   /* #FFA502 */
+  --color-success:    46 213 115;  /* #2ED573 */
+  --color-bg:         248 249 250; /* #F8F9FA */
+  --color-surface:    255 255 255; /* #FFFFFF */
+  --color-card:       241 243 245; /* #F1F3F5 */
+  --color-border:     0 0 0;       /* 0,0,0 modified by opacity */
+  --color-text:       17 17 17;    /* #111111 */
+
+  /* Safe area insets for notched Android devices */
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-right);
+}
+
+.dark {
+  /* Dark Mode */
+  --color-bg:         13 13 20;    /* #0D0D14 */
+  --color-surface:    19 19 31;    /* #13131F */
+  --color-card:       26 26 46;    /* #1A1A2E */
+  --color-border:     255 255 255; /* 255,255,255 */
+  --color-text:       255 255 255; /* #FFFFFF */
+}
+
+/* ─── Base Reset ───────────────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', system-ui, sans-serif;
+  overscroll-behavior: none;
+}
+
+/* ─── Scrollbar Styling ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(108,99,255,0.4); border-radius: 2px; }
+
+/* ─── Utility Classes ──────────────────────────────────────────────────────── */
+@layer components {
+  .glass {
+    background: rgba(26, 26, 46, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-border);
+  }
+
+  .page-container {
+    @apply h-full overflow-y-auto;
+    padding-bottom: calc(5rem + var(--sab));
+  }
+
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-widest text-white/40 mb-3;
+  }
+
+  /* Touch ripple feel */
+  .pressable {
+    @apply active:scale-95 transition-transform duration-100;
+  }
+}

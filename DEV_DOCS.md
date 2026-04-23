@@ -33,16 +33,16 @@
 └──────────────────────┬──────────────────────────────────┘
                        │ reads / dispatches
 ┌──────────────────────▼──────────────────────────────────┐
-│             Hooks  (derived computed state)              │
-│   useAttendance  │  useSubjects  │  useTodaySchedule     │
+│             Hooks  (derived computed state)             │
+│   useAttendance  │  useSubjects  │  useTodaySchedule    │
 └──────────────────────┬──────────────────────────────────┘
                        │
         ┌──────────────┴──────────────┐
         ▼                             ▼
 ┌───────────────┐           ┌─────────────────────┐
-│ Zustand Stores│           │  lib/calculations.ts │
-│ (in-memory    │           │  (pure functions,    │
-│  + persisted) │           │   no side effects)   │
+│ Zustand Stores│           │  lib/calculations.ts│
+│ (in-memory    │           │  (pure functions,   │
+│  + persisted) │           │   no side effects)  │
 └───────┬───────┘           └─────────────────────┘
         │ read / write
 ┌───────▼──────────────────────────────────────────────┐

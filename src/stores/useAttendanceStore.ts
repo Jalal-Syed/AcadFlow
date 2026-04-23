@@ -33,9 +33,11 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   },
 
   updateRecord: async (id, status) => {
-    await db.attendanceRecords.update(id, { status })
+    // FIX NEW-BUG-02: stamp updatedAt in both DB and in-memory state so sync layer sees the change
+    const updatedAt = new Date().toISOString()
+    await db.attendanceRecords.update(id, { status, updatedAt })
     set(state => ({
-      records: state.records.map(r => r.id === id ? { ...r, status } : r),
+      records: state.records.map(r => r.id === id ? { ...r, status, updatedAt } : r),
     }))
   },
 
@@ -46,6 +48,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
     while (!current.isAfter(end)) {
       for (const subjectId of subjectIds) {
+        // FIX NEW-BUG-01: include updatedAt so in-memory state matches DB (Dexie hook stamps DB but not the object we push into Zustand)
         records.push({
           id: crypto.randomUUID(),
           subjectId,
@@ -53,6 +56,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
           date: current.toISOString(),
           status,
           isMidtermBonusDay: false,
+          updatedAt: new Date().toISOString(),
         })
       }
       current = current.add(1, 'day')

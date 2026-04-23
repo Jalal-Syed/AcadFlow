@@ -3,7 +3,41 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
+// When building for Electron, assets must use relative paths (./)
+// because the app is loaded via file:// and absolute paths like /assets/
+// resolve to the filesystem root instead of the dist/ folder.
+// For web/PWA, base stays '/' so CDN-hosted deployments work normally.
+const isElectronBuild = process.env.ELECTRON === 'true'
+
 export default defineConfig({
+  base: isElectronBuild ? './' : '/',
+
+  build: {
+    rollupOptions: {
+      // These are Android-only Capacitor packages that must never be bundled
+      // for Electron or web builds. They are loaded at runtime inside the APK
+      // via dynamic import() guarded by isCapacitorNative(). Rollup can't
+      // resolve them during the desktop/web build — externalizing them tells
+      // Rollup to leave those import() calls alone instead of throwing.
+      external: [
+        '@capacitor/http',
+        '@capacitor/preferences',
+        '@capacitor-community/inappbrowser',
+      ],
+    },
+  },
+
+  optimizeDeps: {
+    // These Capacitor packages are Android-only runtime plugins.
+    // They don't exist in node_modules during web/Electron dev, so Vite's
+    // pre-bundler must not attempt to resolve or pre-bundle them.
+    exclude: [
+      '@capacitor/http',
+      '@capacitor/preferences',
+      '@capacitor-community/inappbrowser',
+    ],
+  },
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -18,7 +18,7 @@ export const useProfileStore = create<ProfileState>()(
       profile: null,
       gradingScale: JNTUH_R25,
 
-      setProfile: (p) => set({ profile: p }),
+      setProfile: (p) => set({ profile: { ...p, updatedAt: p.updatedAt ?? new Date().toISOString() } }),
 
       updateProfile: (partial) =>
         set(state => ({

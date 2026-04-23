@@ -169,10 +169,10 @@ jobs:
         run: pnpm build
 
       - name: Build Electron app — ${{ matrix.name }}
-        run: pnpm exec electron-builder ${{ matrix.build_flag }} --publish never
+        run: pnpm exec electron-builder ${{ matrix.build_flag }} --publish onTagOrDraft
         env:
-          # Provide GH_TOKEN so electron-builder can optionally auto-publish,
-          # but we pass --publish never so we control the release ourselves.
+          # GH_TOKEN lets electron-builder upload latest.yml / latest-linux.yml /
+          # latest-mac.yml to the GitHub Release so installed apps can auto-update.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload desktop artifact

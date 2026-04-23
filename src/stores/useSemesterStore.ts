@@ -15,6 +15,7 @@ interface SemesterState {
   updateSemester: (id: string, partial: Partial<Semester>) => void
   setActiveSemester: (id: string) => void
   archiveSemester: (id: string) => void
+  removeSemester: (id: string) => void
 
   // Subject actions
   addSubject: (s: Subject) => void
@@ -32,25 +33,31 @@ export const useSemesterStore = create<SemesterState>()(
 
       activeSemester: () => get().semesters.find(s => s.id === get().activeSemesterId),
 
-      addSemester: (s) => set(state => ({ semesters: [...state.semesters, s] })),
+      addSemester: (s) => set(state => ({ semesters: [...state.semesters, { ...s, updatedAt: s.updatedAt ?? new Date().toISOString() }] })),
 
       updateSemester: (id, partial) =>
         set(state => ({
-          semesters: state.semesters.map(s => s.id === id ? { ...s, ...partial } : s),
+          semesters: state.semesters.map(s => s.id === id ? { ...s, ...partial, updatedAt: new Date().toISOString() } : s),
         })),
 
       setActiveSemester: (id) => set({ activeSemesterId: id }),
 
       archiveSemester: (id) =>
         set(state => ({
-          semesters: state.semesters.map(s => s.id === id ? { ...s, isArchived: true, isActive: false } : s),
+          semesters: state.semesters.map(s => s.id === id ? { ...s, isArchived: true, isActive: false, updatedAt: new Date().toISOString() } : s),
         })),
 
-      addSubject: (s) => set(state => ({ subjects: [...state.subjects, s] })),
+      removeSemester: (id) =>
+        set(state => ({
+          semesters: state.semesters.filter(s => s.id !== id),
+          subjects:  state.subjects.filter(s => s.semesterId !== id),
+        })),
+
+      addSubject: (s) => set(state => ({ subjects: [...state.subjects, { ...s, updatedAt: s.updatedAt ?? new Date().toISOString() }] })),
 
       updateSubject: (id, partial) =>
         set(state => ({
-          subjects: state.subjects.map(s => s.id === id ? { ...s, ...partial } : s),
+          subjects: state.subjects.map(s => s.id === id ? { ...s, ...partial, updatedAt: new Date().toISOString() } : s),
         })),
 
       removeSubject: (id) =>

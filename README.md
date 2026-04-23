@@ -1,194 +1,355 @@
-# AcadFlow
+# AcadFlow 🦉
 
-> **The Academic OS for Indian Engineering Students**  
+> **The Academic OS for Indian Engineering Students**
 > *"Your semester, under control."*
 
 [![Version](https://img.shields.io/badge/version-0.1.0-6C63FF?style=flat-square)](package.json)
 [![Stack](https://img.shields.io/badge/stack-React%2018%20%2B%20TypeScript%20%2B%20Vite-00F5D4?style=flat-square)]()
-[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20PWA%20%7C%20Web-2ED573?style=flat-square)]()
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20PWA%20%7C%20Electron-2ED573?style=flat-square)]()
 [![Regulation](https://img.shields.io/badge/regulation-JNTUH%20R--25-FFA502?style=flat-square)]()
+[![License](https://img.shields.io/badge/license-MIT-white?style=flat-square)](LICENSE)
 
 ---
 
 ## What is AcadFlow?
 
-AcadFlow consolidates everything Indian engineering students track manually across 4–5 apps (or worse, paper): attendance percentages, CIE marks, CGPA, deadlines, timetable, exam countdowns, and syllabus coverage — into one offline-first, always-available app.
+Indian engineering students juggle 6–8 subjects per semester — each with its own attendance counter, two mid-term exams, CBT scores, assignment deadlines, lab records, and an end-sem that can make or break your year. Tracking it all across WhatsApp groups, paper, and three disconnected apps is the status quo.
 
-Built specifically around **JNTUH R-25** academic regulations, with architecture that supports VTU, Anna University, JNTUA, and other university presets without code changes.
+**AcadFlow** fixes that. It is a single, offline-first academic management app built around the **JNTUH R-25** regulation, with grading presets for VTU, Anna University, JNTUA, and more. Everything lives on your device — no sign-up, no internet required for core features. An optional Supabase account lets you sync data across devices.
 
 ---
 
-## Features (V1 Scope)
+## Features
 
-| Module | Description |
+| Module | What it does |
 |---|---|
-| **Attendance Tracker** | Per-subject & aggregate %, safe-skip budget, condonation zones, bulk mark, R-25 midterm bonus hours |
-| **CGPA / GPA Calculator** | SGPA per semester, CGPA with JNTUH best-160-credits rule, degree classification, what-if simulator |
-| **CIE & SEE Tracker** | MT1/MT2 (Part A+B), CBT best-2-of-3 average, assignment avg, viva, SEE marks needed to pass/target grade |
-| **Tasks & Deadlines** | Assignment, lab record, project, presentation — Kanban + deadline calendar, subtasks, priority flags |
-| **Timetable** | Weekly period grid, lab blocks, one-off overrides (cancelled / rescheduled periods) |
-| **Exam Countdown** | MT, CBT, SEE, Supplementary — live countdown timers with notification scheduling |
-| **Syllabus Progress** | Unit-wise topic tracker, coverage %, linked to exam prep study sets |
-| **Notes Organiser** | Subject-tagged notes, PYQs, lab manuals, external links, study sets |
-| **Academic Calendar** | Holidays, college events, exam dates, deadline overlay |
-| **Promotion Gate Checker** | R-25 25%-credit-gate eligibility, shortfall calculation |
-| **Backlog Impact Calculator** | Simulates CGPA delta if a backlog subject is cleared at a target grade |
-| **Onboarding** | 6-step guided setup: profile → university → semester → subjects |
-| **Settings** | Grading scale preset, theme toggle, data export (PDF / Excel / JSON), semester archive |
-
----
-
-## Tech Stack
-
-```
-React 18 + TypeScript    Component framework
-Vite 5                   Build tool & dev server
-Tailwind CSS v3          Utility-first styling
-Zustand                  Lightweight state (persisted via IndexedDB)
-Dexie.js                 IndexedDB ORM — 16-table schema
-React Router v6          Client-side routing
-Framer Motion            Page transitions & micro-animations
-Recharts                 CGPA trend charts
-Day.js                   Date/time (2KB)
-React Hook Form + Zod    Type-safe forms
-Capacitor v6             Android APK packaging
-vite-plugin-pwa          PWA + Workbox offline caching
-jspdf / SheetJS          PDF & Excel export
-```
+| **Attendance Tracker** | Per-subject and aggregate %, safe-skip budget, condonation zone warnings, bulk-mark, heatmap calendar, mid-term bonus hours (R-25 Clause 7.4) |
+| **CGPA / GPA Calculator** | SGPA per semester, cumulative CGPA (JNTUH best-160-of-164 credits), degree classification, What-If simulator |
+| **Internal Marks (Theory CIE)** | MT1 + MT2 (Part A + Part B), CBT best-2-of-3, assignment avg, viva. Back-calculates SEE marks needed per grade |
+| **Lab Marks** | CIE: Day-to-Day + Viva + Internal Exam + Lab Report → /40. SEE: 5-component breakdown → /60 |
+| **Tasks & Assignments** | Assignments, Lab Records, Projects, Presentations, Vivas — priority flags, sub-tasks, filter tabs (Overdue / Today / Upcoming / Done) |
+| **Timetable** | Weekly Mon–Sat period grid, add/delete periods, live "Today's Schedule" on Dashboard |
+| **Exam Countdown** | MidTerm 1/2, CBT, SEE, Supplementary, Lab SEE, Viva — live countdown (d/h/m), subject + type filters |
+| **Syllabus Tracker** | Per-subject Units → Topics. Status cycles: Not Started → In Progress → Completed → Revision Done |
+| **Notes Organiser** | Subject-tagged notes by category (Notes, PYQs, Reference, Lab Manual). Pin, external links |
+| **Academic Calendar** | Monthly view with holidays, exam dates, and task deadlines overlaid |
+| **Semesters** | Create, edit, archive, delete. Progress bar, quick links to Subjects / Labs / NCS / Syllabus |
+| **Subjects** | Theory / Lab / No-Credit subject management with colour coding and live attendance preview |
+| **Portal Scraper** | Import attendance + marks directly from your college portal (TKREC supported; WebView capture mode for others) |
+| **Cloud Sync** | Optional Supabase-backed cross-device sync. Google OAuth + magic-link sign-in. Delta sync, last-write-wins |
+| **Settings** | Grading scale, dark/light theme, JSON data export/import/reset, sync status |
+| **Onboarding** | 6-step first-run flow: Welcome → Profile → University → Semester → Subjects → Done |
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-- **Node.js** ≥ 18
-- **pnpm** (preferred — `npm install -g pnpm`)
-- Android Studio (only for APK builds)
 
-### Install & Run
+- [Node.js](https://nodejs.org/) ≥ 18
+- [pnpm](https://pnpm.io/) — `npm install -g pnpm`
+- Android Studio (only if building the APK locally)
+
+### Install & Run (Web / Dev)
 
 ```bash
-# Clone
 git clone https://github.com/Jalal-Syed/AcademicTracker.git
 cd AcademicTracker
-
-# Install dependencies
 pnpm install
-
-# Start dev server (http://localhost:5173)
-pnpm dev
-
-# Production build
-pnpm build
-
-# Android APK (requires Android Studio)
-pnpm cap:sync
-pnpm cap:open
+pnpm dev          # http://localhost:5173
 ```
 
-### Other scripts
+### Environment Variables (for cloud sync)
+
+Create a `.env` file in the project root:
+
+```env
+VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+```
+
+The app works fully offline without these. They are only needed for the optional cross-device sync feature.
+
+---
+
+## Scripts
 
 ```bash
-pnpm lint          # ESLint check
-pnpm format        # Prettier format all src files
-pnpm test          # Vitest unit tests
-pnpm test:e2e      # Playwright E2E tests
-pnpm preview       # Preview production build locally
+pnpm dev                  # Dev server with HMR at localhost:5173
+pnpm build                # TypeScript check + Vite production build → dist/
+pnpm preview              # Serve the production build locally
+pnpm lint                 # ESLint
+pnpm format               # Prettier
+pnpm test                 # Vitest unit tests
+
+# Android
+pnpm cap:sync             # Build + sync web assets into the Android project
+pnpm cap:open             # Open Android Studio (then Build → Generate Signed APK)
+
+# Electron desktop
+pnpm electron:dev         # Run as Electron desktop app in dev mode
+pnpm electron:build:win   # Build Windows installer (.exe) → release-builds/
+pnpm electron:build:linux # Build Linux AppImage → release-builds/
+pnpm electron:build:mac   # Build macOS DMG → release-builds/
 ```
+
+---
+
+## Building for All Platforms
+
+### The Short Answer
+
+You cannot reliably cross-compile all platforms from a single Windows machine.
+The correct workflow is to **push a version tag to GitHub** — the CI pipeline handles everything automatically.
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+This triggers `.github/workflows/release.yml` which spins up 4 parallel jobs across GitHub-hosted runners and produces:
+
+| Artifact | Runner | Output |
+|---|---|---|
+| Android APK | `ubuntu-latest` | `AcadFlow-v0.2.0-android.apk` |
+| Windows installer | `windows-latest` | `AcadFlow-Setup-0.2.0.exe` |
+| Linux AppImage | `ubuntu-latest` | `AcadFlow-0.2.0.AppImage` |
+| macOS DMG | `macos-latest` | `AcadFlow-0.2.0.dmg` |
+
+All 4 files are automatically attached to a GitHub Release. The update manifest files (`latest.yml`, `latest-linux.yml`, `latest-mac.yml`) are also uploaded so installed desktop apps can auto-update.
+
+---
+
+### Building Locally from Windows
+
+#### Android APK (local)
+
+1. Install [Android Studio](https://developer.android.com/studio) and accept the SDK licences.
+2. Install JDK 17 (bundled with Android Studio or install separately).
+3. Run:
+
+```bash
+pnpm cap:sync       # builds the web app + copies dist/ into the Android project
+pnpm cap:open       # opens Android Studio
+```
+
+4. In Android Studio: **Build → Generate Signed Bundle / APK → APK → debug** (for sideloading) or set up a keystore for a release APK.
+
+> **Note:** The CI workflow generates a debug-signed APK automatically. For Play Store distribution you need a release keystore — see [Android signing docs](https://developer.android.com/studio/publish/app-signing).
+
+#### Windows installer (local)
+
+```bash
+pnpm electron:build:win
+```
+
+Output: `release-builds/AcadFlow Setup x.y.z.exe`
+
+#### Linux AppImage from Windows
+
+`electron-builder` can cross-compile Linux targets from Windows but requires [Docker Desktop](https://www.docker.com/products/docker-desktop/). Without Docker, use the CI pipeline instead.
+
+If you have Docker running:
+
+```bash
+pnpm electron:build:linux
+```
+
+#### macOS DMG from Windows
+
+❌ **Not possible.** macOS builds require Apple's toolchain and code-signing certificates which only run on macOS. The CI pipeline uses a `macos-latest` GitHub Actions runner for this.
+
+---
+
+## Desktop Auto-Updates
+
+Once a user installs AcadFlow (Windows `.exe` or Linux `.AppImage`), the app checks for updates automatically — no manual reinstall ever needed.
+
+### How it works
+
+1. On startup and every 4 hours, the app calls `electron-updater` which fetches the `latest.yml` (Windows) or `latest-linux.yml` (Linux) manifest from the GitHub Release.
+2. If a newer version is available, it downloads the new installer **silently in the background** while the user continues working.
+3. When the download is complete, a banner appears in the app: **"Update ready — restart to install"**.
+4. The user clicks **"Restart now"** or, if they dismiss it, the update installs automatically the next time they quit the app normally.
+
+### Releasing an update
+
+```bash
+# 1. Bump the version in package.json
+#    (e.g. "version": "0.1.0" → "0.2.0")
+
+# 2. Commit and tag
+git add package.json
+git commit -m "chore: bump to v0.2.0"
+git tag v0.2.0
+git push origin main --tags
+
+# 3. CI builds all 4 platforms and publishes the GitHub Release.
+#    Installed apps will discover the update within 4 hours (or on next launch).
+```
+
+### macOS auto-updates
+
+macOS requires the app to be **code-signed and notarized** by Apple for auto-updates to work. This requires an Apple Developer account and certificates stored as GitHub Actions secrets (`APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `CSC_LINK`, `CSC_KEY_PASSWORD`). Without this, macOS users download the new DMG manually from the GitHub Releases page.
 
 ---
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   ├── ui/            # Design system primitives (Button, Card, Badge, Modal…)
-│   ├── attendance/    # AttendanceCard, HeatmapCalendar, BunkingBudget…
-│   ├── grades/        # SubjectMarksCard, CGPAChart, WhatIfSimulator…
-│   ├── tasks/         # TaskItem, KanbanBoard, DeadlineCalendar…
-│   └── timetable/     # TimetableGrid, PeriodSlot, DayView…
-├── constants/
-│   └── grading.ts     # JNTUH R-25 grade scale, attendance zones, degree classes
-├── db/
-│   └── schema.ts      # Dexie AcadFlowDB — 16-table IndexedDB schema
-├── hooks/
-│   ├── useAttendance.ts      # Computed summaries from store + calculations
-│   ├── useSubjects.ts        # Active semester subjects + colour palette
-│   └── useTodaySchedule.ts   # Live timetable for today + override resolution
-├── lib/
-│   ├── calculations.ts  # All pure academic math (CGPA, CIE, attendance, SGPA…)
-│   ├── formatters.ts    # Display helpers
-│   └── notifications.ts # Capacitor local notification scheduling
-├── pages/
-│   ├── Onboarding/    ├── Dashboard/   ├── Attendance/
-│   ├── Grades/        ├── Tasks/       ├── Timetable/
-│   ├── Exams/         ├── Syllabus/    ├── Notes/
-│   ├── Calendar/      └── Settings/
-├── stores/            # Zustand stores (profile, semester, attendance, tasks, exams, UI)
-└── types/
-    └── index.ts       # All TypeScript types & interfaces
+AcadFlow/
+├── src/
+│   ├── App.tsx                  # Root — routing, onboarding gate, theme, layout
+│   ├── main.tsx                 # Entry point, Capacitor init, auth init, sync
+│   ├── index.css                # CSS custom properties (dark/light tokens)
+│   │
+│   ├── types/index.ts           # All TypeScript interfaces and union types
+│   ├── constants/grading.ts     # Grading scale presets, attendance zones, palette
+│   ├── db/schema.ts             # Dexie AcadFlowDB — 15-table schema + auto-stamp hooks
+│   │
+│   ├── lib/
+│   │   ├── calculations.ts      # Pure functions — attendance, CIE, SGPA, CGPA, grading
+│   │   ├── notifications.ts     # Capacitor local notifications
+│   │   ├── supabase.ts          # Supabase client (auth + sync)
+│   │   ├── sync/index.ts        # Delta sync orchestrator (push/pull, last-write-wins)
+│   │   └── scraper/             # Portal scraper (WebView capture + AI extraction)
+│   │
+│   ├── stores/                  # Zustand stores
+│   │   ├── useProfileStore.ts
+│   │   ├── useSemesterStore.ts
+│   │   ├── useAttendanceStore.ts
+│   │   ├── useTaskStore.ts
+│   │   ├── useExamStore.ts
+│   │   ├── useAuthStore.ts      # Supabase session (Google OAuth + magic link)
+│   │   ├── useSyncStore.ts      # Sync state (lastSyncAt, syncStatus)
+│   │   ├── usePortalStore.ts    # Portal scraper state
+│   │   └── useUIStore.ts
+│   │
+│   ├── hooks/                   # useAttendance, useSubjects, useTodaySchedule
+│   │
+│   ├── components/
+│   │   ├── ui/                  # 16 design system primitives
+│   │   ├── attendance/          # AttendanceCard, BunkingBudget, HeatmapCalendar
+│   │   ├── grades/              # SubjectMarksCard, CGPAChart, WhatIfSimulator
+│   │   └── tasks/               # TaskItem
+│   │
+│   └── pages/                   # 18 pages
+│       ├── Onboarding/          # 6-step wizard
+│       ├── Login/               # Google OAuth + magic link (optional)
+│       ├── AuthCallback/        # OAuth redirect handler (web + Electron + Android)
+│       ├── Dashboard/
+│       ├── Attendance/
+│       ├── Grades/
+│       ├── Tasks/ + Assignments/
+│       ├── Timetable/
+│       ├── Exams/
+│       ├── Syllabus/
+│       ├── Notes/
+│       ├── Calendar/
+│       ├── Subjects/ + Semesters/
+│       ├── Labs/ + NCS/
+│       ├── Import/              # Portal scraper UI
+│       └── Settings/
+│
+├── electron/
+│   ├── main.js                  # Main process — windows, IPC, deep-link, auto-updater
+│   ├── preload.js               # contextBridge — scraperBridge, authBridge, webviewBridge, updateBridge
+│   ├── scraper-bridge.js        # CORS-free HTTP fetch via Node
+│   └── package.json             # electron-updater dependency
+│
+├── .github/workflows/
+│   └── release.yml              # CI: APK + EXE + AppImage + DMG on git tag push
+│
+├── public/icons/                # PWA icons (192, 512, maskable)
+├── capacitor.config.ts
+├── vite.config.ts               # Electron-aware base path + PWA config
+├── tailwind.config.ts
+└── package.json
 ```
 
 ---
 
-## Platforms
+## Tech Stack
 
-| Target | Method | Status |
-|---|---|---|
-| **Android APK** | React + Vite → Capacitor → APK | 🔨 In progress |
-| **PWA** | Vite PWA Plugin + Workbox | 🔨 In progress |
-| **Desktop Web** | Hosted on Vercel/Netlify | 🔨 In progress |
-
----
-
-## University Support
-
-| University | Grading Preset | Notes |
-|---|---|---|
-| JNTUH | ✅ R-25 (primary) | Best-160 CGPA, MT best-2-of-3, promotion gate |
-| VTU | ✅ Preset | |
-| Anna University | ✅ Preset | |
-| JNTUA | ✅ Preset | |
-| RTU / GTU / RGPV | ✅ Preset | |
-| Custom | ✅ User-defined | Define your own grade points and thresholds |
-
----
-
-## Build Status
-
-| Layer | Status |
+| Layer | Choice |
 |---|---|
-| Config & tooling (Vite, Tailwind, Capacitor, ESLint) | ✅ Complete |
-| TypeScript types (`src/types/index.ts`) | ✅ Complete |
-| IndexedDB schema (`src/db/schema.ts`) | ✅ Complete |
-| Grading constants (`src/constants/grading.ts`) | ✅ Complete |
-| Calculation logic (`src/lib/calculations.ts`) | ✅ Complete |
-| Zustand stores (6 stores) | ✅ Complete |
-| UI design system (15 primitives) | ✅ Complete |
-| React hooks (3 hooks) | ✅ Complete |
-| Page shells (11 pages) | ✅ Complete |
-| Onboarding step components | 🔨 Next |
-| Feature components (attendance, grades, tasks…) | 🔨 Upcoming |
-| Notification system | 🔨 Upcoming |
-| Export / reports (PDF, Excel) | 🔨 Upcoming |
-| Unit tests (Vitest) | 🔨 Upcoming |
-| E2E tests (Playwright) | 🔨 Upcoming |
+| UI Framework | React 18 + TypeScript |
+| Build | Vite 5 |
+| Styling | Tailwind CSS v3 |
+| State | Zustand with persist middleware |
+| Local DB | Dexie.js (IndexedDB) — 15 tables, v3 schema with delta-sync hooks |
+| Routing | React Router v6 |
+| Animation | Framer Motion |
+| Charts | Recharts |
+| Dates | Day.js |
+| Forms | React Hook Form + Zod |
+| Icons | Lucide React |
+| Mobile | Capacitor v6 |
+| PWA | vite-plugin-pwa + Workbox |
+| Desktop | Electron 30 + electron-builder + electron-updater |
+| Cloud | Supabase (auth + PostgreSQL sync) |
+
+---
+
+## Platform Support
+
+| Platform | Status | Notes |
+|---|---|---|
+| Android (APK) | ✅ Ready | Sideload via debug APK or use Android Studio for release APK |
+| PWA | ✅ Configured | Icons pending — add to `public/icons/` |
+| Desktop Web | ✅ Responsive | Works in any modern browser |
+| Windows (Electron) | ✅ Shipped — v0.1.0 | Auto-updates via electron-updater |
+| Linux (Electron) | ✅ CI build ready | AppImage, auto-updates supported |
+| macOS (Electron) | ✅ CI build ready | DMG; auto-updates require Apple code-signing |
+
+---
+
+## University & Grading Support
+
+| University | Preset |
+|---|---|
+| JNTUH R-25 | ✅ Primary — best-2-of-3 CBT, best-160 CGPA, 75% aggregate, SEE ≥ 21 |
+| VTU | ✅ |
+| Anna University | ✅ |
+| JNTUA | ✅ |
+| Custom | ✅ — define grade points + pass thresholds in Settings |
+
+---
+
+## Data & Privacy
+
+All academic data is stored **locally on your device** using IndexedDB (Dexie.js). The core app works completely offline with no account required.
+
+**Cloud sync is opt-in.** When you sign in via Settings → Sign in to sync, your data is encrypted in transit and stored in your personal Supabase row (scoped by user ID). AcadFlow does not have access to your data.
+
+Export a full JSON backup from **Settings → Data → Export** at any time.
+
+---
+
+## Upcoming
+
+| Feature | Status |
+|---|---|
+| **Portal Scraper** — auto-import attendance + marks from your college portal (TKREC adapter + WebView capture mode) | 🛠️ In Progress |
+| **Android Home Screen Widget** — attendance % + next exam countdown | 🗓️ Planned |
+| **Google Calendar Sync** | 🗓️ Planned |
+| **Flux AI Nudges** — smart attendance alerts + study schedule generator | 🗓️ Planned |
+| **iOS (Capacitor)** | 🗓️ Planned — needs Mac + Apple Developer account |
+| **Play Store / F-Droid release** | 🗓️ Planned — requires release keystore + store listing |
 
 ---
 
 ## Regulation Reference
 
-All JNTUH-specific logic (attendance thresholds, CIE structure, best-2-of-3 CBT rule, best-160-credits CGPA, promotion credit gate, SEE pass minimum, degree classification) is derived from the **JNTUH B.Tech R-25 regulation** (AY 2025–26 onwards).
+All JNTUH-specific logic derives from **JNTUH B.Tech R-25** (AY 2025–26):
 
-Future regulation updates (R-27 etc.) are modelled as new `GradingScale` presets — zero code changes required.
+- Attendance: Clause 7 (aggregate eligibility), Clause 7.4 (mid-term bonus hours)
+- CIE: Clause 8 (best-2-of-3, assignment avg, viva)
+- Grading scale: Clause 10.3 (O / A+ / A / B+ / B / C / F)
+- CGPA: Clauses 10.9 / 10.11 (best 160 of 164 credits, percentage formula)
+- Degree classification: Clause 17
+- Promotion gate: Clause 14 (≥ 25% registered credits per year-end)
 
 ---
 
-## Mascot
-
-**Flux** 🦉 — a small, circuit-board-winged owl whose eyes shift colour based on your academic health (green = safe, amber = watch out, red = danger zone). Appears in onboarding, empty states, and motivational nudges.
-
----
-
-*Full product specification: [`AcadFlow_Product_Spec.md`](./AcadFlow_Product_Spec.md)*
+*Made for students who are tired of doing academics in five different places at once.*

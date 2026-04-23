@@ -23,8 +23,15 @@ import {
   Sun, Moon, Download, Upload, Trash2,
   ChevronRight, BookOpen, Calendar, ClipboardList,
   Clock, FileText, AlignLeft, StickyNote, CalendarDays,
-  Beaker, Hash, Layers,
+  Beaker, Hash, Layers, Link2,
+  Cloud, LogIn, LogOut, UserCircle2, RefreshCw, CheckCircle2, AlertCircle,
 } from 'lucide-react'
+import { useSyncStore } from '@/stores/useSyncStore'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+dayjs.extend(relativeTime)
+import { usePortalStore } from '@/stores/usePortalStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const UNIVERSITY_OPTIONS = [
   { value: 'JNTUH',    label: 'JNTUH (R-25)' },
@@ -56,6 +63,7 @@ const QUICK_LINKS = [
   { to: '/semesters',   icon: Layers,        label: 'Semesters' },
   { to: '/labs',        icon: Beaker,        label: 'Labs' },
   { to: '/ncs',         icon: Hash,          label: 'No Credit' },
+  { to: '/import',      icon: Link2,         label: 'Portal Sync' },
 ]
 
 interface SettingRowProps {
@@ -90,12 +98,22 @@ function SettingRow({ icon: Icon, iconBg, label, value, onClick }: SettingRowPro
 export default function SettingsPage() {
   const navigate = useNavigate()
   const { profile, updateProfile, gradingScale, setGradingScale, clearProfile } = useProfileStore()
+  const { configuredProviders } = usePortalStore()
+  const portalConnected = configuredProviders.length > 0
   const { semesters, activeSemesterId } = useSemesterStore()
   const { theme, setTheme } = useUIStore()
+  const { user, status: authStatus, signOut } = useAuthStore()
+  const { lastSyncAt, syncStatus, lastError, lastSyncedRecordCount, sync } = useSyncStore()
 
   const [showProfile, setShowProfile] = useState(false)
   const [showGrading, setShowGrading] = useState(false)
   const [showClear, setShowClear] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    try { await signOut() } finally { setSigningOut(false) }
+  }
 
   // Profile form state
   const [pName, setPName] = useState(profile?.name ?? '')
@@ -305,9 +323,112 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      {/* Cloud Sync section */}
+      <section className="space-y-1 border border-border/[0.06] rounded-2xl bg-white/[0.02] p-3">
+        <p className="text-text/30 text-[10px] uppercase tracking-wider pl-1 mb-2">Cloud Sync</p>
+
+        {authStatus === 'authenticated' && user ? (
+          // Signed in — show account info + sync controls
+          <>
+            <div className="flex items-center gap-3 px-3 py-3">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: 'rgba(46,213,115,0.12)', border: '1px solid rgba(46,213,115,0.25)' }}
+              >
+                <UserCircle2 size={16} style={{ color: '#2ED573' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-text/80 text-xs font-medium">Signed in</p>
+                <p className="text-text/30 text-[10px] truncate">{user.email}</p>
+              </div>
+            </div>
+
+            {/* Sync status row */}
+            <div className="flex items-center gap-3 px-3 py-2">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: 'rgba(108,99,255,0.1)', border: '1px solid rgba(108,99,255,0.2)' }}
+              >
+                {syncStatus === 'syncing' ? (
+                  <RefreshCw size={15} className="text-[#6C63FF] animate-spin" />
+                ) : syncStatus === 'error' ? (
+                  <AlertCircle size={15} className="text-[#FF4757]" />
+                ) : syncStatus === 'success' ? (
+                  <CheckCircle2 size={15} className="text-[#2ED573]" />
+                ) : (
+                  <Cloud size={15} className="text-[#6C63FF]" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-text/80 text-xs font-medium">
+                  {syncStatus === 'syncing' ? 'Syncing…' :
+                   syncStatus === 'error' ? 'Sync failed' :
+                   lastSyncAt ? `Synced ${dayjs(lastSyncAt).fromNow()}` : 'Not synced yet'}
+                </p>
+                <p className="text-text/30 text-[10px] truncate">
+                  {syncStatus === 'error' && lastError
+                    ? lastError
+                    : lastSyncAt && lastSyncedRecordCount > 0
+                    ? `${lastSyncedRecordCount} records · auto-syncs on app start`
+                    : 'Auto-syncs on app start'}
+                </p>
+              </div>
+              <button
+                onClick={sync}
+                disabled={syncStatus === 'syncing'}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#6C63FF]/15 text-[#6C63FF] border border-[#6C63FF]/25 hover:bg-[#6C63FF]/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {syncStatus === 'syncing' ? 'Syncing…' : 'Sync Now'}
+              </button>
+            </div>
+
+            <div className="px-3 pb-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={signingOut}
+                onClick={handleSignOut}
+                className="w-full justify-start gap-2 text-[#FF4757] hover:text-[#FF4757]"
+              >
+                <LogOut size={14} />
+                Sign out
+              </Button>
+            </div>
+          </>
+        ) : (
+          // Signed out
+          <>
+            <div className="px-3 py-2 space-y-1">
+              <p className="text-text/50 text-xs">
+                Sign in to sync your data across devices when cloud sync launches in v1.2.
+              </p>
+            </div>
+            <div className="px-3 pb-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                fullWidth
+                onClick={() => navigate('/login')}
+                className="justify-start gap-2"
+              >
+                <LogIn size={14} />
+                Sign in with Google or Email
+              </Button>
+            </div>
+          </>
+        )}
+      </section>
+
       {/* Data management */}
       <section className="space-y-1 border border-border/[0.06] rounded-2xl bg-white/[0.02] p-3">
         <p className="text-text/30 text-[10px] uppercase tracking-wider pl-1 mb-2">Data</p>
+        <SettingRow
+          icon={Link2}
+          iconBg="#6C63FF"
+          label="Portal Sync"
+          value={portalConnected ? `Connected · ${configuredProviders.length} provider${configuredProviders.length > 1 ? 's' : ''}` : 'Auto-import attendance & marks'}
+          onClick={() => navigate('/import')}
+        />
         <SettingRow icon={Download} iconBg="#2ED573" label="Export All Data" value="Download JSON backup" onClick={handleExport} />
         <SettingRow icon={Upload} iconBg="#FFA502" label="Import Data" value="Restore from backup" onClick={handleImport} />
         <SettingRow icon={Trash2} iconBg="#FF4757" label="Clear All Data" value="Permanently delete everything" onClick={() => setShowClear(true)} />
@@ -317,7 +438,7 @@ export default function SettingsPage() {
       <section className="space-y-1 border border-border/[0.06] rounded-2xl bg-white/[0.02] p-3">
         <p className="text-text/30 text-[10px] uppercase tracking-wider pl-1 mb-2">About</p>
         <div className="px-3 py-2 space-y-1">
-          <p className="text-text/60 text-xs">AcadFlow <span className="text-text/25">v1.5</span></p>
+          <p className="text-text/60 text-xs">AcadFlow <span className="text-text/25">v0.1.0</span></p>
           <p className="text-text/25 text-[10px]">The Academic OS for Indian Engineering Students</p>
           <p className="text-text/20 text-[10px]">Regulation: JNTUH B.Tech R-25 (AY 2025-26)</p>
           <p className="text-text/15 text-[10px]">All data stored locally on your device.</p>

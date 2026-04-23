@@ -29,8 +29,9 @@ export default {
         'zone-critical':    'rgb(var(--color-danger) / <alpha-value>)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans:    ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Inter', 'system-ui', 'sans-serif'],
+        mono:    ['JetBrains Mono', 'monospace'],
       },
       borderRadius: {
         xl2: '1rem',

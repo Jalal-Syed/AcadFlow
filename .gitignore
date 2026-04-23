@@ -15,6 +15,14 @@ dist-ssr/
 android/
 ios/
 
+# Electron build output
+release-builds/
+
+# Electron app icons (binary files — generate locally, don't commit)
+electron/assets/*.ico
+electron/assets/*.icns
+electron/assets/*.png
+
 # Editor
 .vscode/
 .idea/
@@ -39,3 +47,12 @@ test-results/
 
 # TypeScript
 *.tsbuildinfo
+
+# Dev credentials — NEVER commit
+portal_dev_credentials_for_tkrec.in.md
+
+
+.env
+.env.example
+
+_fix_session_append.md

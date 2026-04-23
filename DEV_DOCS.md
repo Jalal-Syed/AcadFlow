@@ -503,7 +503,7 @@ These are features described in the spec that are architecturally wired but not 
 
 | Item | Notes |
 |---|---|
-| **Supabase cloud sync** | The data schema is designed for it. Needs `@supabase/supabase-js`, auth, and a sync layer. Spec §8. |
+| **Supabase cloud sync** | ✅ Shipped — `src/lib/supabase.ts`, `src/stores/useAuthStore.ts`, `src/lib/sync/index.ts`, `src/stores/useSyncStore.ts`. Google OAuth + magic-link auth, delta sync (push/pull via `updatedAt`), last-write-wins. Dexie v3 upgrade adds `updatedAt` index + auto-stamp hooks on all tables. |
 | **PDF / Excel export** | `jspdf` and `xlsx` are in `package.json`. The export functions in Settings need to be wired up. |
 | **PWA service worker** | `vite-plugin-pwa` is configured but the manifest icons in `public/icons/` are empty placeholders. |
 | **Android back-button** | `@capacitor/app` is installed. `App.addListener('backButton', ...)` needs to be wired in `main.tsx`. |
@@ -518,3 +518,137 @@ These are features described in the spec that are architecturally wired but not 
 ---
 
 *DEV_DOCS.md — AcadFlow v1.4 — Last updated 2026-04-04*
+
+---
+
+## 14. Scraper Architecture
+
+> **Status:** Architecture finalised. Implementation tracked in `fixes-to-be-made.md` under SCRAPER-001.
+
+### Overview
+
+The portal scraper is built around an **adapter pattern**. The core engine (`src/lib/scraper/`) is completely portal-agnostic. Each university/college portal gets a single adapter file in `src/lib/scraper/adapters/`. Adding support for a new portal means writing one file and registering it — nothing else changes.
+
+### File Map
+
+```
+src/lib/scraper/
+├── types.ts           PortalAdapter interface, SessionData, ScrapedAttendance,
+│                    ScrapedMarks, ScrapedSubject, SyncResult, HttpClient
+├── http.ts            Platform-aware HTTP layer (see below)
+├── crypto.ts          Credential encryption (Electron safeStorage / WebCrypto)
+├── scheduler.ts       Daily sync scheduling
+├── index.ts           Orchestrator: login(), syncAll(), scheduleDaily()
+└── adapters/
+    ├── index.ts         Registry + getAdapter(id) helper
+    └── tkrec.ts         TKREC portal adapter (first, used for dev/testing)
+
+src/stores/usePortalStore.ts   Portal config + sync state
+src/pages/Import/index.tsx     Portal sync UI
+
+electron/scraper-bridge.js     Node-side IPC fetch handler (no CORS)
+electron/preload.js            contextBridge: exposes window.scraperBridge
+```
+
+### Platform HTTP Layer
+
+CORS blocks direct portal fetches in the browser. The `http.ts` module abstracts this:
+
+| Platform | Mechanism | How detected |
+|---|---|---|
+| Electron | `window.scraperBridge.fetch()` (IPC → Node fetch) | `window.scraperBridge !== undefined` |
+| Android | `@capacitor/http` CapacitorHttp | `Capacitor.isNativePlatform()` |
+| Web | Throws `ScraperNotSupportedError` | fallback |
+
+### Writing a New Adapter
+
+1. Create `src/lib/scraper/adapters/myportal.ts`
+2. Implement the `PortalAdapter` interface from `types.ts`:
+
+```ts
+import type { PortalAdapter, SessionData, HttpClient } from '../types'
+
+export const MyPortalAdapter: PortalAdapter = {
+  id: 'my-portal',             // unique string, shown in adapter picker
+  name: 'My University Portal',
+  baseUrl: 'https://portal.myuniv.edu',
+  credentialFields: [
+    { label: 'Roll Number', key: 'username', type: 'text' },
+    { label: 'Password',    key: 'password', type: 'password' },
+  ],
+
+  async login(credentials, http) {
+    // POST to login endpoint, extract session cookies/token
+    const res = await http.post('/login', {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(credentials).toString(),
+    })
+    const cookies = res.headers['set-cookie'] ?? ''
+    return { cookies, token: null }  // whatever the portal uses
+  },
+
+  async scrapeSubjects(session, http) {
+    const res = await http.get('/student/subjects', { cookies: session.cookies })
+    const doc = new DOMParser().parseFromString(res.text, 'text/html')
+    // parse table rows → return ScrapedSubject[]
+    return []
+  },
+
+  async scrapeAttendance(session, http) {
+    // same pattern
+    return []
+  },
+
+  async scrapeMarks(session, http) {
+    // same pattern
+    return []
+  },
+}
+```
+
+3. Register it in `src/lib/scraper/adapters/index.ts`:
+
+```ts
+import { TKRECAdapter } from './tkrec'
+import { MyPortalAdapter } from './myportal'
+
+export const ADAPTERS: Record<string, PortalAdapter> = {
+  [TKRECAdapter.id]:    TKRECAdapter,
+  [MyPortalAdapter.id]: MyPortalAdapter,
+}
+
+export function getAdapter(id: string): PortalAdapter | null {
+  return ADAPTERS[id] ?? null
+}
+```
+
+4. Add it to the adapter picker options in `src/pages/Import/index.tsx`.
+
+That's the entire contract. The engine calls `login()` then `scrapeSubjects()`, `scrapeAttendance()`, `scrapeMarks()` in sequence. Your adapter just needs to return the right types.
+
+### Data Mapping
+
+The orchestrator (`index.ts`) maps scraped types to AcadFlow's internal schema:
+
+| Scraped type | Maps to | Store action |
+|---|---|---|
+| `ScrapedSubject` | `Subject` | `useSemesterStore.addSubject()` |
+| `ScrapedAttendance` | `AttendanceRecord[]` (one per class held) | `useAttendanceStore.bulkImport()` |
+| `ScrapedMarks` | `TheoryMarks` or `LabMarks` | `db.theoryMarks.put()` / `db.labMarks.put()` |
+
+**Conflict rule: portal always wins.** Existing records for the same `subjectId + semesterId` are replaced, not merged.
+
+### Scheduling
+
+- **Electron:** `scheduler.ts` registers a `node-cron` job (`0 8 * * *` = 8 AM daily). Also fires on window focus if last sync > 20h ago.
+- **Android:** `src/main.tsx` registers `App.addListener('appStateChange', ...)`. When app resumes from background, checks `lastSyncAt` — if > 20h ago, calls `syncNow()`.
+- Both paths call the same `syncAll()` function in `index.ts`.
+
+### Credential Storage
+
+| Platform | Storage | Encryption |
+|---|---|---|
+| Electron | `electron.safeStorage.encryptString()` → stored in user data dir | OS-level keychain (hardware-backed on Windows/Mac) |
+| Android | WebCrypto AES-GCM, key in `@capacitor/preferences` | Software AES-256 |
+
+Credentials are never stored in IndexedDB, Zustand `localStorage`, or any plaintext file. The user can choose "ask every time" to skip storage entirely.

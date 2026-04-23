@@ -1,739 +1,540 @@
-# AcadFlow — Product Specification Document
-### *The Academic OS for Indian Engineering Students*
+# AcadFlow — Product Specification
 
-> **Version:** 1.4 — V1 Core Complete
-> **Author:** Derived from founder interview + JNTUH R-25 Academic Regulations  
-> **Date:** 2026-04-02  
-> **Regulation Reference:** JNTUH B.Tech R-25 (effective AY 2025–26)  
-> **Status:** 🟢 All files complete — `pnpm build` passing
+> **Regulation:** JNTUH B.Tech R-25 (AY 2025–26)
+> **Version:** 2.0 — Last updated 2026-04-05
+> **Status:** All 16 pages implemented · Electron Windows installer shipped · Build passing
 
 ---
 
 ## Table of Contents
 
-1. [Vision & Mission](#1-vision--mission)
+1. [Vision](#1-vision)
 2. [Branding & Identity](#2-branding--identity)
 3. [Target Audience](#3-target-audience)
 4. [Platform Strategy](#4-platform-strategy)
 5. [Tech Stack](#5-tech-stack)
-6. [Feature Specifications](#6-feature-specifications)
-   - 6.1 Onboarding & Profile Setup
-   - 6.2 Dashboard (Home)
-   - 6.3 Attendance Tracker
-   - 6.4 CGPA / GPA Calculator
-   - 6.5 Assignment, Deadline & Project Manager
-   - 6.6 Internal Marks & End-Sem Tracker
-   - 6.7 Timetable & Schedule
-   - 6.8 Exam Countdown Timers
-   - 6.9 Syllabus Progress Tracker
-   - 6.10 Study Material & Notes Organizer
-   - 6.11 Backlog Impact Calculator
-   - 6.12 Holiday & College Calendar
-   - 6.13 University Grading Presets
-   - 6.14 Promotion Rules & Credit Gates
-7. [UI / UX Design System](#7-ui--ux-design-system)
-8. [Data Architecture](#8-data-architecture)
-9. [Notification System](#9-notification-system)
-10. [Build, Deployment & Distribution](#10-build-deployment--distribution)
-11. [Future Roadmap](#11-future-roadmap)
-12. [Non-Negotiables & Quality Gates](#12-non-negotiables--quality-gates)
-13. [Progress Log](#13-progress-log)
+6. [Data Architecture](#6-data-architecture)
+7. [Design System](#7-design-system)
+8. [Routing](#8-routing)
+9. [Feature Specifications](#9-feature-specifications)
+10. [JNTUH R-25 Rules Reference](#10-jntuh-r-25-rules-reference)
+11. [Calculation Engine](#11-calculation-engine)
+12. [Notification System](#12-notification-system)
+13. [Roadmap](#13-roadmap)
+14. [Known Gaps](#14-known-gaps)
 
 ---
 
-## 1. Vision & Mission
+## 1. Vision
 
-### The Problem
-Indian engineering students — across thousands of JNTUH, VTU, Anna University, JNTUA, and similar affiliated colleges — have no single reliable tool that consolidates the academic chaos of their daily life. The pain isn't grades alone. It's the fragmented, invisible mess of:
-- 6–8 subjects per semester, each with independent assignment deadlines
-- Lab submissions, viva, and poster presentation schedules that appear with zero notice
-- Two mid-term exams per subject, averaged for 30 CIE marks, plus separate assignment and viva components — all tracked manually
-- The 75% aggregate attendance rule and condonation bands hanging over every decision to attend or skip
-- Mid-term exams, CBTs, end-sem, supplementary, and backlog exam dates scattered across notice boards and WhatsApp groups
-- Promotion rules that gate you from the next year if credits fall below 25% of total registered
+Indian engineering students juggle 6–8 subjects per semester, each with independent attendance counters, two mid-term exams, CBT scores, assignment deadlines, lab records, and an end-sem. There is no single reliable tool that consolidates this.
 
-No existing tool solves this holistically. Students use 4–5 disconnected apps (or worse, paper) and still drop the ball.
+**AcadFlow** is the Academic Operating System for Indian engineering students. It tracks everything, calculates everything, reminds you of everything — offline, always-available, built specifically around JNTUH R-25 with preset support for VTU, Anna University, JNTUA, and more.
 
-### The Vision
-**AcadFlow** is the single Academic Operating System for Indian engineering students. It tracks everything, calculates everything, reminds you of everything, and keeps your academic life from falling apart — offline, always-available, beautiful enough that you actually want to open it.
-
-### Core Principle
-> "If it's academic and it can be tracked, AcadFlow tracks it."
+> *"If it's academic and it can be tracked, AcadFlow tracks it."*
 
 ---
 
 ## 2. Branding & Identity
 
-### App Name
-**AcadFlow**
-- *Acad* — Academic. Immediately legible.
-- *Flow* — State of being in control, smooth progress, no friction.
-- Tagline: **"Your semester, under control."**
-- Alt tagline: **"The academic OS you deserved from day one."**
+**Name:** AcadFlow — *Acad* (academic) + *Flow* (state of control, smooth progress).
+**Taglines:** "Your semester, under control." / "The academic OS you deserved from day one."
+**Mascot:** Flux — a circuit-board-winged owl whose eye colour shifts with academic health (green / amber / red).
 
-### Mascot
-**"Flux"** — a small, energetic owl with circuit-board wing patterns and glowing eyes that shift color based on your current academic health (green = great, amber = watch out, red = danger zone). Flux appears in:
-- Onboarding screens (guiding the user through setup)
-- Empty states ("No assignments yet — enjoy it while it lasts!")
-- Motivational nudges when attendance drops or a deadline is near
-- Achievement unlocks (e.g., "Full attendance week 🦉")
+### Colour Palette
 
-Flux should feel like a witty, nerdy companion — not a corporate mascot. Think Duolingo owl energy, but self-aware and slightly sarcastic.
+| Token | Hex | Use |
+|---|---|---|
+| Primary | `#6C63FF` | Electric Indigo — CTAs, active states |
+| Accent | `#00F5D4` | Neon Cyan — secondary accents |
+| Danger | `#FF4757` | Errors, critical attendance, failed grades |
+| Warning | `#FFA502` | Amber — deadlines, condonable zone |
+| Success | `#2ED573` | Emerald — present, passed, safe |
+| Background (dark) | `#0D0D14` | Page background |
+| Surface (dark) | `#13131F` | Cards and modals |
+| Card (dark) | `#1A1A2E` | Elevated card surface |
 
-### Logo Mark
-A stylized "A" formed by two intersecting sine waves — one representing grades (peaks = exams), one representing time (x-axis = semester). Clean, geometric, works as an app icon at 48x48 px and as a full wordmark.
+### Typography
 
-### Color Identity
-- **Primary:** Electric Indigo `#6C63FF`
-- **Accent:** Neon Cyan `#00F5D4`
-- **Danger:** Vibrant Red `#FF4757`
-- **Warning:** Amber Gold `#FFA502`
-- **Success:** Emerald `#2ED573`
-- **Background (dark):** `#0D0D14`
-- **Surface (dark):** `#13131F`
-- **Card (dark):** `#1A1A2E`
+| Role | Font |
+|---|---|
+| Body + headings | Inter (active) |
+| Monospace / numbers | JetBrains Mono |
 
 ---
 
 ## 3. Target Audience
 
-### Primary User
-- Engineering student (B.Tech / B.E., years 1–4)
-- Indian university system — JNTUH-affiliated colleges as the initial reference model
-- Age: 17–22
-- Device: Android smartphone (primary), laptop browser (secondary)
-- Connectivity: Frequently offline or on patchy hostel Wi-Fi
+**Primary:** B.Tech student, JNTUH-affiliated college, Android phone, frequently offline.
 
-### Extended Users
-| Segment | Degree | Notes |
-|---|---|---|
-| Diploma students | 3-year polytechnic | Simpler semester structure, same attendance rules |
-| Postgrad | M.Tech / M.E. | More research-oriented, fewer subjects, thesis tracking needed |
-| Integrated | 5-year B.Tech+M.Tech | 10 semesters, longer arc |
-| All branches | CS/IT, ECE/EEE, Mech, Civil, Chem, etc. | Branch-agnostic subject system |
+| Segment | Notes |
+|---|---|
+| B.Tech (years 1–4) | Primary — JNTUH R-25 is the reference regulation |
+| Diploma | Simpler semester structure, same attendance rules |
+| M.Tech | Fewer subjects, thesis tracking needed (future) |
+| Integrated B.Tech+M.Tech | 10 semesters |
 
 ### Grading System Support
+
 | Mode | Description |
 |---|---|
-| 10-point CGPA | AICTE/UGC standard. Grade points: O=10, A+=9, A=8, B+=7, B=6, C=5, F=0 |
-| Percentage | Direct % input and calculation |
+| JNTUH R-25 | Primary — 10-point CGPA, best-160 credits, SEE >= 21 |
+| VTU | SEE pass >= 18 |
+| Anna University | Slightly different grade bands |
+| JNTUA | Similar to JNTUH |
 | Custom | User-defined grade points and thresholds |
-| University preset | Pre-loaded scales for JNTUH, VTU, Anna University, JNTUA, RTU, GTU, RGPV, etc. |
 
 ---
 
 ## 4. Platform Strategy
 
-### Three Equal Targets
-
 | Platform | Method | Priority |
 |---|---|---|
-| **Android App** | React + Vite → Capacitor → APK | P1 |
-| **PWA** | Vite PWA Plugin + Service Worker | P1 |
-| **Desktop Web** | Hosted on Vercel/Netlify, responsive layout | P1 |
-
-### Platform-Specific Behavior
-- **Android (Capacitor):** Native push notifications, haptic feedback on attendance mark, back-button handling, splash screen, status bar theming.
-- **PWA:** `manifest.json` with full installability, offline caching via Workbox, background sync for reminders.
-- **Desktop:** Sidebar navigation instead of bottom nav, keyboard shortcuts, wider data-dense layouts.
+| Android App | React + Vite -> Capacitor -> APK | P1 |
+| PWA | vite-plugin-pwa + Workbox | P1 |
+| Desktop Web | Hosted on Vercel/Netlify | P1 |
+| Electron (Windows/Linux/macOS) | electron + electron-builder | P1 -- shipped v0.1.0 |
 
 ### Responsive Breakpoints
-```
-Mobile:  < 640px   → bottom nav, single column, touch-first
-Tablet:  640–1024px → hybrid layout, collapsible sidebar
-Desktop: > 1024px  → full sidebar, multi-column dashboard
-```
+
+| Width | Layout |
+|---|---|
+| < 768px | Full device width, bottom nav, single column |
+| 768-1024px | Content capped at 768px max-width, centred |
+| > 1024px | Full sidebar (240px), content at 768px max-width |
+
+### Electron Note
+
+Electron loads via `file://`. Vite's default `base: '/'` produces absolute asset paths that break on `file://`. Fixed by setting `base: './'` when `ELECTRON=true` env var is present (via `cross-env`). All `electron:build*` scripts prepend `cross-env ELECTRON=true pnpm build`.
 
 ---
 
 ## 5. Tech Stack
 
-### Core Framework
-| Layer | Choice | Reason |
-|---|---|---|
-| Framework | **React 18 + TypeScript** | Component reusability, strong ecosystem, Capacitor support |
-| Build Tool | **Vite 5** | Fastest dev server, native ESM, excellent PWA plugin |
-| Styling | **Tailwind CSS v3** | Utility-first, mobile-first, purge = tiny bundle |
-| State Management | **Zustand** | Lightweight, no boilerplate, persists to IndexedDB easily |
-| Routing | **React Router v6** | Standard, supports nested routes cleanly |
-| Icons | **Lucide React** | Clean, consistent, tree-shakeable |
-| Charts | **Recharts** | React-native, responsive, good for CGPA trend charts |
-| Animations | **Framer Motion** | Page transitions, card reveals, gesture support |
-| Date/Time | **Day.js** | 2KB alternative to moment, handles academic calendars well |
-| Forms | **React Hook Form + Zod** | Type-safe, performant, zero re-renders |
-
-### Storage
-| Layer | Technology |
+| Layer | Choice |
 |---|---|
-| Primary local DB | **IndexedDB** via **Dexie.js** (clean API, reactive queries) |
-| App state cache | **Zustand** with `persist` middleware → IndexedDB adapter |
-| File/notes blobs | IndexedDB blob storage |
-| Cloud sync (future) | **Supabase** (PostgreSQL + Auth + Realtime) — architecture ready from day 1 |
-
-### Mobile (Capacitor)
-```
-@capacitor/core
-@capacitor/android
-@capacitor/local-notifications
-@capacitor/haptics
-@capacitor/status-bar
-@capacitor/splash-screen
-@capacitor/app
-```
-
-### PWA
-```
-vite-plugin-pwa
-workbox-window
-workbox-strategies (NetworkFirst for API, CacheFirst for assets)
-```
-
-### Export / Reports
-```
-jspdf + jspdf-autotable  → PDF report cards
-xlsx (SheetJS)           → Excel export
-file-saver               → JSON/CSV download trigger
-```
-
-### Dev Tooling
-```
-ESLint + Prettier
-Husky + lint-staged (pre-commit hooks)
-Vitest (unit tests)
-Playwright (E2E)
-```
+| Framework | React 18 + TypeScript |
+| Build | Vite 5 |
+| Styling | Tailwind CSS v3 |
+| State | Zustand with persist middleware |
+| Local DB | Dexie.js (IndexedDB) |
+| Routing | React Router v6 |
+| Animation | Framer Motion |
+| Charts | Recharts |
+| Dates | Day.js |
+| Forms | React Hook Form + Zod |
+| Icons | Lucide React |
+| Mobile | Capacitor v6 |
+| PWA | vite-plugin-pwa + Workbox |
+| Desktop | Electron + electron-builder |
+| Export | jsPDF + jspdf-autotable, SheetJS |
+| Package manager | pnpm |
 
 ---
 
-## 6. Feature Specifications
+## 6. Data Architecture
 
----
+**Local-first.** All data lives on device. No account required. Cloud sync is planned (Supabase) but not built.
 
-### 6.1 Onboarding & Profile Setup
+### Two Parallel Storage Tracks
 
-**Trigger:** First launch only. Skippable after step 1.
-
-**Flow:**
-1. **Welcome screen** — Flux mascot intro, tagline, "Let's set up your semester" CTA
-2. **Academic Profile:**
-   - Full name
-   - College name (free text + optional search from a preset list)
-   - University affiliation (dropdown: JNTUH, VTU, Anna Univ, JNTUA, Other)
-   - Degree type (B.Tech / Diploma / M.Tech / Integrated)
-   - Branch / stream
-   - Current semester (1–10)
-   - Roll number (optional, used for display only)
-3. **Grading System Setup:**
-   - Auto-fill based on university selection
-   - Option to override with custom grade points
-   - Attendance threshold (default 75%, editable)
-4. **Subject Setup for Current Semester:**
-   - Add subjects one by one (name, subject code, credits, type: Theory/Lab)
-   - Quick-add templates per branch (e.g., "CSE Sem 3 — JNTUH" pre-fills common subjects)
-5. **Timetable Setup** — covered in 6.7
-6. **Done** — Flux celebrates, dashboard loads
-
-**Data Saved:** `userProfile`, `semesterConfig`, `subjectList`, `timetable`
-
----
-
-### 6.2 Dashboard (Home)
-
-The Dashboard is the **command center**. It must deliver the full academic health picture at a glance without any digging.
-
-**Sections (top to bottom on mobile):**
-
-#### 1. Header Strip
-- Greeting: "Good morning, [Name] 👋"
-- Current date + week number of semester
-- Quick academic health badge: 🟢 On Track / 🟡 Watch Out / 🔴 Danger Zone (computed from attendance + upcoming deadlines)
-
-#### 2. Today's Schedule Card
-- Today's classes from timetable
-- Each class shows: subject name, time, room (if set)
-- Tap to mark attendance directly from here
-- Visual indicator: completed / upcoming / missed
-
-#### 3. Attendance Summary Strip
-- **Top row:** Aggregate attendance % (large, prominent badge) with zone colour and label ("Safe" / "Condonable" / "Detained Risk")
-- **Below:** Horizontal scroll of per-subject attendance cards
-- Each card: subject name, current %, color-coded per zone table
-- Tap any card → full per-subject attendance detail
-- Mid-term bonus hours shown as a separate "+Xh bonus" tag if applicable
-
-#### 4. Upcoming Deadlines
-- Next 3–5 items from the Assignment/Exam manager
-- Sorted by urgency (days remaining)
-- Color-coded urgency: green (>7 days), amber (3–7 days), red (<3 days), black (overdue)
-
-#### 5. CGPA Snapshot
-- Current cumulative CGPA (large, prominent)
-- This semester's predicted SGPA
-- Tiny sparkline showing CGPA trend across semesters
-
-#### 6. Flux Nudge Card
-- One dynamic, contextual tip from Flux
-- Examples: "You can skip 2 more classes in Data Structures safely.", "DBMS internal is in 3 days. You've not added any notes yet.", "You've had full attendance this week 🔥"
-
----
-
-### 6.3 Attendance Tracker
-
-The most-used daily feature. Must be frictionless to mark and powerful to analyze.
-
-#### Marking Attendance
-- **From Dashboard:** Tap today's class → mark Present / Absent / Late / OD (On Duty) / Medical
-- **From Attendance module:** Full subject list, mark any date retroactively
-- **Bulk entry:** "I missed all classes from [date] to [date]" — marks all as absent in one tap
-- **Swipe gesture:** Swipe right on a class = Present, swipe left = Absent (configurable)
-
-#### Per-Subject View
-For each subject, display:
-- Total classes held
-- Classes attended
-- Current attendance % (large, circular progress indicator)
-- **Bunking Budget:** "You can miss X more classes and stay above 75%"
-- **Catch-up Alert:** "You need to attend the next Y classes consecutively to recover"
-- Calendar heatmap of attendance (like GitHub contribution graph, per subject)
-- Monthly trend chart
-
-#### Attendance Rules (JNTUH R-25 — Clause 7)
-
-> ⚠️ **Critical:** JNTUH attendance eligibility is calculated as **aggregate across ALL subjects** in a semester — not per-subject independently. The app tracks per-subject for granularity but must prominently display the **aggregate %** that determines exam eligibility.
-
-| Rule | JNTUH R-25 Value | Configurable in App? |
+| Store | Technology | What lives there |
 |---|---|---|
-| Minimum aggregate threshold | **75%** | Yes (other universities may differ) |
-| Condonation band | **65–74%** (up to 10% shortage, on valid grounds + fee) | Display only — user manually applies |
-| Non-condonable zone | **Below 65%** — no exceptions, student is detained | Hard-coded, cannot be overridden |
-| Mid-term attendance bonus | **+2 hours per theory subject** if student appears for that subject's mid-term exam (Clause 7.4) | Toggle on/off per subject |
-| On Duty (OD) | Counted as present | Toggle on/off |
-| Medical leave | Show separately; user decides if college excludes it | Toggle on/off |
-| Detained consequence | Registration cancelled, internal marks voided, must re-register next year | Informational warning only |
+| Zustand + persist | localStorage | Profile, semesters, subjects, UI state |
+| Dexie | IndexedDB | Attendance, tasks, exams, timetable, notes, marks, syllabus |
 
-#### Attendance Zones & UI Colours
-| Zone | Aggregate % | Meaning | Colour |
+The split is intentional: subjects and semesters are small and benefit from Zustand's synchronous API. Attendance records can be thousands of rows — they belong in Dexie with indexed queries.
+
+### IndexedDB Schema (15 tables)
+
+| Table | Primary Key | Key Indexes |
+|---|---|---|
+| profile | &id | -- |
+| gradingScales | &id | universityId |
+| semesters | &id | number, isActive |
+| subjects | &id | semesterId, type |
+| attendanceRecords | &id | subjectId, semesterId, date, status |
+| theoryMarks | &id | subjectId, semesterId |
+| labMarks | &id | subjectId, semesterId |
+| tasks | &id | semesterId, subjectId, status, dueDate, priority |
+| exams | &id | semesterId, subjectId, type, date |
+| timetableSlots | &id | semesterId, day, [semesterId+day] |
+| timetableOverrides | &id | semesterId, date |
+| syllabusUnits | &id | subjectId |
+| notes | &id | semesterId, subjectId, category, isPinned |
+| studySets | &id | semesterId |
+| holidays | &id | semesterId, date |
+
+### Zustand Store Reference
+
+| Store | Persisted? | DB-backed? | Key state |
 |---|---|---|---|
-| Safe | ≥ 85% | No risk, comfortable buffer | Emerald `#2ED573` |
-| Okay | 75–84% | Above threshold, low buffer | Teal `#00C9B1` |
-| Condonable | 65–74% | Below threshold but may be condoned (fee + grounds) | Amber `#FFA502` |
-| Critical | < 65% | Non-condonable — student will be detained | Red `#FF4757` |
+| useProfileStore | yes (acadflow-profile) | no | profile, gradingScale |
+| useSemesterStore | yes (acadflow-semesters) | no | semesters[], subjects[], activeSemesterId |
+| useAttendanceStore | no | yes - loadRecords(semId) | records[], isLoaded |
+| useTaskStore | no | yes - loadTasks(semId) | tasks[], isLoaded |
+| useExamStore | no | yes - loadExams(semId) | exams[], isLoaded |
+| useUIStore | yes (theme only) | no | theme, isDesktop, openModals[] |
 
-#### Bunking Budget Formula
-```
-// Per-subject safe-skip counter (informational, not the eligibility metric)
-per_subject_safe_skips = floor(total_classes_held × 0.75) - classes_attended
-if per_subject_safe_skips < 0: show "You need to attend N more classes in [Subject]"
+**Pattern:** DB-backed stores require `loadX(activeSemesterId)` called in `useEffect` on mount. Always include the action in the dep array.
 
-// Aggregate eligibility (the real JNTUH metric)
-total_classes_all_subjects = sum of classes held across all subjects
-total_attended_all_subjects = sum of attended across all subjects (+ mid-term bonus hours)
-aggregate_pct = (total_attended / total_classes) × 100
-
-aggregate_safe_skips = total_classes_all_subjects - floor(total_classes_all_subjects × 0.75)
-                       - (total_classes_all_subjects - total_attended_all_subjects)
-```
-
-The **dashboard prominently shows aggregate %** with a clear label. Per-subject % is shown as a secondary breakdown.
-
-#### Semester-wide Summary
-- Overall attendance % across all subjects
-- Subjects at risk (below threshold)
-- Total working days vs holidays
+**`activeSemester` is a function, not a value.** Call it as: `useSemesterStore(s => s.activeSemester())`
 
 ---
 
-### 6.4 CGPA / GPA Calculator
+## 7. Design System
 
-#### Modes
+**Language:** Glassmorphic Dark Neon. Dark-first, glass cards (backdrop-blur: 12px), Electric Indigo + Neon Cyan accents.
 
-**Mode 1: Semester GPA Calculator**
-- Input: Grade/marks for each subject in a semester + their credits
-- Output: SGPA for that semester
-- Supports: O/A+/A/B+/B/C/F grade input OR raw marks (auto-converts to grade)
+All tokens are CSS custom properties switched by `.dark` / `.light` class on `<html>`. `App.tsx` applies the class from `useUIStore.theme` in a `useEffect`.
 
-**Mode 2: Cumulative CGPA**
-- Pulls all semester SGPAs and credits
-- Calculates running CGPA
-- Displays semester-wise breakdown table
-- CGPA trend line chart across all semesters
+### Semantic Token Map
 
-**Mode 3: What-If Simulator**
-- Select a semester
-- Adjust expected grades for subjects
-- See real-time CGPA update as you drag/change inputs
-- "What grade do I need in End-Sem to get an A in this subject?"
-- "What SGPA do I need this semester to reach 8.0 CGPA overall?"
-
-**Mode 4: Target CGPA Calculator**
-- Input: Desired final CGPA, semesters remaining
-- Output: Required SGPA per remaining semester
-- Shows if target is achievable and how hard
-
-#### JNTUH Grading Scale (R-25, Clause 10.3)
-| Marks Range | Grade | Grade Point |
+| Token | Dark | Light |
 |---|---|---|
-| ≥ 90 | O (Outstanding) | 10 |
-| 80–89 | A+ (Excellent) | 9 |
-| 70–79 | A (Very Good) | 8 |
-| 60–69 | B+ (Good) | 7 |
-| 50–59 | B (Average) | 6 |
-| 40–49 | C (Pass) | 5 |
+| text-text | #FFFFFF | #111111 |
+| bg-bg | #0D0D14 | #F8F9FA |
+| bg-surface | #13131F | #FFFFFF |
+| bg-card | #1A1A2E | #F1F3F5 |
+
+**CSS variable usage:** Custom properties store raw RGB channels (e.g. `17 17 17`) for Tailwind opacity support. Always consume as `rgb(var(--color-text))` or `rgb(var(--color-text) / 0.55)`. Never use bare `var(--color-text)` in a `color:` property.
+
+### UI Primitives (src/components/ui/)
+
+| Component | Key Props |
+|---|---|
+| Button | variant (primary/secondary/danger/ghost), size, loading, fullWidth |
+| Badge | variant (success/warning/danger/info/primary/default), size, dot |
+| ProgressRing | percent, size, strokeWidth — SVG ring, colour maps to zone |
+| ProgressBar | value, max, height, animate, showLabel |
+| Modal | open, onClose, title, size (sm/md/lg) |
+| Input | label, hint, error |
+| Select | label, options[], error |
+| FAB | onClick, label, icon |
+| EmptyState | title, description, action? |
+| Skeleton | Loading placeholder, style?: CSSProperties |
+| Toast | Imperative — use exported toast helper |
+| BottomNav | Mobile nav + theme toggle at trailing edge |
+| Sidebar | Desktop nav (240px, collapsible) + theme toggle in footer |
+
+---
+
+## 8. Routing
+
+Onboarding gate in `App.tsx`: if `profile?.onboardingComplete !== true`, all routes redirect to `/onboarding`.
+
+| Route | Page | Notes |
+|---|---|---|
+| /onboarding/* | Onboarding (6 steps) | Welcome -> Profile -> University -> Semester -> Subjects -> Done |
+| / | Dashboard | Command centre |
+| /attendance | Attendance | Mark + analytics |
+| /grades | Grades | CIE + CGPA + WhatIf |
+| /tasks | Tasks | All task types |
+| /assignments | Assignments | Assignment-specific view |
+| /timetable | Timetable | Weekly period grid |
+| /exams | Exams | Countdown + filters |
+| /syllabus | Syllabus | Unit -> Topic drill-down |
+| /notes | Notes | Tagged notes organiser |
+| /calendar | Calendar | Monthly overlay view |
+| /subjects | Subjects | Subject CRUD |
+| /semesters | Semesters | Semester CRUD + progress |
+| /labs | Labs | Lab marks tracker |
+| /ncs | NCS | No-Credit Subjects |
+| /settings | Settings | Profile, grading, theme, export/import |
+| * | -> / | Catch-all redirect |
+
+**Content max-width:** All pages render inside `max-w-3xl` (768px) `mx-auto` wrapper in `App.tsx`. Zero individual page files need width logic. Onboarding uses `max-w-lg` (512px).
+
+---
+
+## 9. Feature Specifications
+
+### 9.1 Onboarding (6 Steps)
+
+Triggered on first launch only. `finish()` calls `updateProfile({ onboardingComplete: true })` before navigating to `/` — this is the gate condition. Missing this call causes an infinite redirect loop back to onboarding.
+
+Steps: Welcome -> Profile (name, college, roll no.) -> University (university, degree, branch, grading preset) -> Semester (number, academic year, start/end dates, attendance threshold) -> Subjects (add Theory/Lab/NoCredit) -> Done (seeds grading scales to DB).
+
+### 9.2 Dashboard
+
+Sections (top-to-bottom, mobile): header strip with greeting + academic health badge > Today's Schedule card > Attendance summary strip > Upcoming deadlines > CGPA snapshot > Flux nudge card.
+
+Data: greets with `profile.name`. Attendance from `useAttendanceStore`. Tasks from `useTaskStore`. Exams from `useExamStore`. All loaded in a single `useEffect` — all three load actions must be in the deps array.
+
+### 9.3 Attendance Tracker
+
+- Per-subject and aggregate tracking. Per-subject % is informational; **aggregate % is the real JNTUH eligibility metric.**
+- Mark from Dashboard (today's schedule) or Attendance page (any date).
+- Bulk mark: all subjects across a date range in one tap.
+- Mid-term bonus: +2 hours per theory subject per mid-term appeared (R-25 Clause 7.4), toggleable per subject.
+- OD counted as Present: toggleable. Medical excluded: toggleable.
+- Heatmap: `getDayCellKind()` returns typed enum. All text colours use `rgb(var(--color-text) / opacity)` — light-mode safe.
+
+**Attendance Zones:**
+
+| Zone | Aggregate % | Colour |
+|---|---|---|
+| Safe | >= 85% | #2ED573 |
+| Okay | 75-84% | #00C9B1 |
+| Condonable | 65-74% | #FFA502 |
+| Critical (Detained Risk) | < 65% | #FF4757 |
+
+### 9.4 Grades (CGPA / GPA Calculator)
+
+**Mode 1 - Semester GPA:** Input grades/marks per subject -> SGPA.
+**Mode 2 - Cumulative CGPA:** All semester SGPAs + credits -> running CGPA + sparkline.
+**Mode 3 - What-If Simulator:** Adjust expected grades per subject, see real-time SGPA update. Per-subject grade target grid. SGPA target calculator with gap analysis. Theory subjects only (labs not in what-if).
+**Mode 4 - Target CGPA:** Input desired final CGPA + semesters remaining -> required SGPA per remaining semester.
+
+### 9.5 Internal Marks (Theory CIE)
+
+```
+MT1 = Part A (/10) + Part B (/20) = /30
+MT2 = Part A (/10) + Part B (/20) = /30
+CBT = /30 (optional)
+Mid-term CIE = best-2-of-3(MT1, MT2, CBT) averaged -> /30
+Assignment CIE = avg(Assign1, Assign2) -> /5
+Viva = /5
+Total CIE = Mid-term CIE + Assignment avg + Viva -> /40
+SEE = /60    Total = /100
+```
+
+Pass: SEE >= 21 AND Total >= 40 (R-25 Clause 8.1). App back-calculates SEE needed to pass and SEE needed for each grade.
+
+### 9.6 Lab Marks
+
+```
+CIE (/40): Day-to-Day /10 + Viva (Internal) /10 + Internal Exam /10 + Lab Report /10
+SEE (/60): Write-up /10 + Execution /15 + Results /15 + Presentation /10 + Viva Voce /10
+```
+
+Stored via `db.labMarks.put()` (upsert) — no separate add/update paths.
+
+### 9.7 Tasks & Assignments
+
+Types: Assignment / LabRecord / Project / Presentation / Viva / Other.
+Priorities: Low / Medium / High / Critical.
+Filter tabs: All / Overdue / Today / This Week / Done. FAB quick-add.
+Assignments page: same task store, adds description textarea + subject filter chips.
+
+### 9.8 Timetable
+
+Weekly Mon-Sat period grid. Queried via compound Dexie index `[semesterId+day]`. Delete calls `db.timetableSlots.delete()` directly. Timetable override UI not yet built (schema exists).
+
+### 9.9 Exam Countdown
+
+Types: MidTerm1/2, CBT, SEE, Supplementary, LabSEE, Viva, FieldProject, Internship, ProjectViva.
+Countdown ticker: updates every 60s via `setInterval`. 3 independent filters: tab (upcoming/past) + subject + type. Past: newest-first. Upcoming: soonest-first.
+
+### 9.10 Syllabus Tracker
+
+Two-screen drill-down: Subject list -> Unit/Topic detail. Topic status cycles on tap: NotStarted -> InProgress -> Completed -> RevisionDone. Topics stored inline in `SyllabusUnit.topics[]` — each status change does a full array replace via `db.syllabusUnits.update(unitId, { topics: [...] })`.
+
+### 9.11 Notes Organiser
+
+Categories: Notes / PYQs / Reference / LabManual / Other. Sort: pinned first, then createdAt descending. No edit flow — delete and re-add. richText stored as plain string (no KaTeX yet).
+
+### 9.12 Calendar
+
+Monthly grid overlaying: holidays (Dexie query), exam dates + task deadlines (from in-memory store — requires tasks + exams already loaded). Event dot colours: holiday=red, exam=indigo, task=amber. Day-detail panel on tap. Add Holiday modal.
+
+### 9.13 Subjects
+
+Theory / Lab / NoCredit grouped cards. Live attendance % per subject via `useLiveQuery`. Auto-colour from `SUBJECT_COLORS` palette. CRUD via Zustand store actions.
+
+### 9.14 Semesters
+
+Active / archived sections. Progress bar = elapsed / totalDays. Delete requires 3-step confirmation. Quick-links grid to /subjects, /labs, /ncs, /syllabus.
+
+### 9.15 Settings
+
+- Profile, university, grading scale config
+- Theme toggle (dark/light) — persisted + applied to `<html>` in App.tsx
+- Export: native `Blob + URL.createObjectURL` — full JSON of all 15 tables
+- Import: `db.transaction('rw', db.tables, ...)` — clears all tables then bulk-adds
+- Clear All: with confirmation dialog
+
+### 9.16 NCS (No-Credit Subjects)
+
+Read-only view. Attendance pulled from `db.attendanceRecords` via `useLiveQuery`. Displays R-25 note: NCS attendance IS counted in aggregate eligibility.
+
+---
+
+## 10. JNTUH R-25 Rules Reference
+
+### Attendance (Clause 7)
+
+Eligibility is **aggregate across ALL subjects** — not per-subject.
+
+| Rule | Value |
+|---|---|
+| Minimum aggregate threshold | 75% |
+| Condonation band | 65-74% (valid grounds + fee) |
+| Non-condonable | Below 65% -- detained, no exceptions |
+| Mid-term bonus | +2 hours per theory subject per mid-term appeared (Clause 7.4) |
+| OD | Counted as Present (toggleable) |
+| Medical | Shown separately, user decides (toggleable) |
+
+### Grading Scale (Clause 10.3)
+
+| Marks | Grade | Grade Point |
+|---|---|---|
+| >= 90 | O (Outstanding) | 10 |
+| 80-89 | A+ (Excellent) | 9 |
+| 70-79 | A (Very Good) | 8 |
+| 60-69 | B+ (Good) | 7 |
+| 50-59 | B (Average) | 6 |
+| 40-49 | C (Pass) | 5 |
 | < 40 | F (Fail) | 0 |
-| Absent | Ab | 0 |
 
-**Pass condition (Clause 8.1):** Student must score **≥ 35% in SEE (21/60 marks)** AND **≥ 40% overall (40/100 marks)** to earn a C grade and the credits.
+Pass condition (Clause 8.1): SEE >= 21 AND Total >= 40.
 
-#### SGPA & CGPA Formulae (Clause 10.9 / 10.11)
+### SGPA & CGPA (Clauses 10.9 / 10.11)
+
 ```
-SGPA = Σ(Ci × Gi) / Σ(Ci)
-CGPA = best 160 of 164 registered credits
-Percentage = (Final CGPA − 0.5) × 10
+SGPA = Sum(Credits x GradePoint) / Sum(Credits)
+CGPA = best 160 of 164 registered credits (greedy sort by grade point desc)
+Percentage = (CGPA - 0.5) x 10
 ```
 
-#### Degree Classification (Clause 17)
-| CGPA Range | Class | Conditions |
+### Degree Classification (Clause 17)
+
+| CGPA | Class | Conditions |
 |---|---|---|
-| ≥ 7.5 | **First Class with Distinction** | All courses passed in first appearance; never detained |
-| ≥ 7.5 (conditions not met) | **First Class** | — |
-| ≥ 6.5 and < 7.5 | **First Class** | — |
-| ≥ 5.5 and < 6.5 | **Second Class** | — |
-| ≥ 5.0 and < 5.5 | **Pass Class** | — |
+| >= 7.5 | First Class with Distinction | All first attempt + never detained |
+| >= 7.5 (conditions not met) | First Class | -- |
+| >= 6.5 | First Class | -- |
+| >= 5.5 | Second Class | -- |
+| >= 5.0 | Pass Class | -- |
+
+### Promotion Gate (Clause 14)
+
+Must earn >= 25% of total registered credits at end of Year 1 (Sem 2) and Year 2 (Sem 4).
 
 ---
 
-### 6.5 Assignment, Deadline & Project Manager
+## 11. Calculation Engine
 
-**Views:** List / Calendar / Subject / Kanban. Task types: Assignment / Lab / Project / Presentation / Viva / Other. Priorities: Low / Medium / High / Critical. Supports sub-tasks, recurring tasks, swipe-to-complete, FAB quick-add, deadline conflict detection.
+**File:** `src/lib/calculations.ts` — pure functions, no side effects, fully testable.
 
----
-
-### 6.6 Internal Marks & End-Sem Tracker
-
-Theory CIE = best-2-of-3(MT1, MT2, CBT) avg (30) + Assignment avg (5) + Viva (5) = 40. SEE = 60. Pass: SEE ≥ 21 AND total ≥ 40. Lab CIE: 4 × 10 components. App back-calculates SEE needed per grade target.
-
----
-
-### 6.7 Timetable & Schedule
-
-Weekly repeating Mon–Sat grid, up to 8 periods/day. Override individual dates (cancelled / rescheduled / extra). Subject color coding consistent across all modules. Conflict detection.
-
----
-
-### 6.8 Exam Countdown Timers
-
-Types: Mid-Term 1/2, CBT, SEE, Supplementary, Lab SEE, Viva, Field Project, Internship, Project Viva. Full countdown display, timeline view, auto-scheduled notifications.
-
----
-
-### 6.9 Syllabus Progress Tracker
-
-Per-subject units → topics. Status: Not Started / In Progress / Completed / Revision Done. Progress bars. Urgency indicator synced with exam countdown.
-
----
-
-### 6.10 Study Material & Notes Organizer
-
-Organized by Semester → Subject → Category. Stores links, rich text notes (KaTeX support), tags. Study set grouping. No file cloud storage in V1 — links only.
-
----
-
-### 6.11 Backlog Impact Calculator
-
-Before/After CGPA comparison when failing a subject. Simulates supplementary score → new CGPA. Credit gate recovery path.
-
----
-
-### 6.12 Holiday & College Calendar
-
-Monthly view with 6 event type colors. Adding a holiday auto-skips timetable attendance for that day. Semester start/end configurable.
-
----
-
-### 6.13 University Grading Presets
-
-Pre-loaded: JNTUH, JNTUA, VTU, Anna University, RTU, GTU, RGPV, AKTU, OU, AU. Full `GradingScale` object per preset. Fully overridable.
-
----
-
-### 6.14 Promotion Rules & Credit Gates (R-25, Clause 14)
-
-Credit gates at end of Year 1 (Sem 2) and Year 2 (Sem 4): must earn ≥ 25% of total registered credits. App shows Promotion Eligibility Card. MEME exit eligibility shown after Sem 4. Graduation tracker: X of 160 credits earned.
-
----
-
-## 7. UI / UX Design System
-
-**Design Language: Glassmorphic Dark Neon.** Dark-first (`#0D0D14`), glass cards (`backdrop-blur: 12px`), Electric Indigo + Neon Cyan neon accents, 4 elevation levels.
-
-**Typography:** Space Grotesk (display), DM Sans (body), JetBrains Mono (numbers).
-
-**Navigation:** Mobile = bottom nav (5 tabs, glass bg, glow underline on active). Desktop = left sidebar (240px, collapsible to 64px).
-
-**Animations:** Framer Motion page transitions, staggered card mounts, progress bar width animations, attendance pulse, CGPA counter roll.
-
-**Light mode:** Full token set under `[data-theme="light"]`. Dark is default, respects `prefers-color-scheme`.
-
----
-
-## 8. Data Architecture
-
-**Local-first.** Dexie.js → IndexedDB. Zustand for app state cache. Supabase cloud sync architecturally prepared, not built in V1.
-
-Key tables: `userProfile`, `semesters`, `subjects`, `attendanceRecords`, `timetableSlots`, `timetableOverrides`, `tasks`, `examRecords`, `notes`, `syllabusUnits`, `syllabusTopic`, `holidays`, `gradingScales`.
-
-Export: full JSON backup + PDF report card via jsPDF.
-
----
-
-## 9. Notification System
-
-Capacitor Local Notifications (Android) + Web Push API (PWA). Triggers: assignment due (24h/1h), exam countdown (7d/3d/1d/morning), CBT reminder (3d), supply exam (7d/3d), attendance danger (on drop), daily class (15min before), overdue tasks (9 AM daily). All individually toggleable in Settings.
-
----
-
-## 10. Build, Deployment & Distribution
-
-**Dev:** `pnpm dev`. **Build:** `pnpm build` (tsc + vite build). **Android:** `pnpm cap:sync && pnpm cap:open` → Android Studio → signed APK/AAB.
-
-**Web:** Vercel, zero-config. Domain: `acadflow.in` / `acadflow.app`. CI/CD: GitHub Actions → auto-deploy on main.
-
-**Play Store:** Target API 34, min SDK 24, Education category, free, no ads.
-
----
-
-## 11. Future Roadmap
-
-**V1.1:** Flux Lottie animations, onboarding tutorial overlay, Android home screen widget, semester archive.
-**V1.2:** Supabase auth (Google SSO), background sync, cross-device restore.
-**V1.3:** JNTUH portal scraper, CSV ERP import, Google Calendar sync.
-**V2.0:** QR timetable sharing, anonymous CGPA leaderboard, shared study sets.
-**V2.1:** AI deadline prioritization, study schedule generator, smarter Flux predictions.
-
----
-
-## 12. Non-Negotiables & Quality Gates
-
-- FCP < 1.5s on 4G, TTI < 3s on Snapdragon 665-class
-- Lighthouse PWA ≥ 90, Performance ≥ 85, bundle < 400KB gzipped
-- 100% offline for core features, zero data loss (Dexie atomic transactions)
-- Unit tests for all calculation logic, E2E for onboarding / attendance / tasks / CGPA
-- WCAG AA contrast, 44×44px tap targets, color never sole status indicator
-
----
-
-*End of AcadFlow Product Specification v1.3*
-
-> **Regulation Reference:** JNTUH B.Tech R-25 (AY 2025–26 onwards). All future regulation changes should be modelled as new `GradingScale` presets — the architecture supports this without code changes.
-
----
-
-## 13. Progress Log
-
-> **Rule:** This section is updated after EVERY filesystem change — no exceptions.
-
----
-
-### 13.1 Decisions Locked
-
-| Decision | Choice | Reason |
-|---|---|---|
-| Package Manager | **pnpm** | Fastest installs, strict hoisting, disk-efficient |
-| Starting Point | **Full scaffold + Design System** | Build the right foundation once |
-| Project Root | `C:\Users\hehehe\Documents\Dev\AcadFlow\` | Local dev path |
-| GitHub Repo | `github.com/Jalal-Syed/AcademicTracker.git` | Existing repo |
-
----
-
-### 13.2 Complete File Inventory
-
-#### Root & Config (Session 1)
-| File | Status |
+| Function | What it does |
 |---|---|
-| `package.json` | ✅ |
-| `vite.config.ts` | ✅ |
-| `tsconfig.json` | ✅ |
-| `tsconfig.node.json` | ✅ |
-| `tailwind.config.ts` | ✅ |
-| `postcss.config.js` | ✅ |
-| `.env.example` | ✅ |
-| `.eslintrc.cjs` | ✅ |
-| `.gitignore` | ✅ |
-| `.prettierrc` | ✅ |
-| `capacitor.config.ts` | ✅ |
-| `index.html` | ✅ |
-| `README.md` | ✅ |
-| `AcadFlow_Product_Spec.md` | ✅ |
+| `calcSubjectAttendance(subject, records)` | Per-subject held/attended/bonus/percentage/zone. safeSkips and catchUpNeeded are intentionally 0 -- per-subject skips are not the JNTUH eligibility metric. |
+| `calcAggregateAttendance(subjects, records)` | Sums across all subjects. The real detention risk metric. |
+| `calcMidTermCIE(mt1, mt2, cbt, hasCBT)` | Best-2-of-3, averaged -> /30. Handles partial entries. |
+| `calcCIETheory(marks)` | Mid-term CIE + assignment avg + viva -> /40. |
+| `computeTheoryMarks(marks, scale)` | Master: full computation -> SubjectMarksComputed. |
+| `calcSGPA(subjects)` | Standard weighted average. |
+| `calcCGPA(courses, useBest160)` | JNTUH best-160 greedy sort; non-JNTUH uses all credits. |
+| `cgpaToPercentage(cgpa)` | (cgpa - 0.5) x 10 |
+| `getDegreeClass(cgpa, firstAttempt, neverDetained)` | Checks bands from DEGREE_CLASSES. |
+| `getPromotionStatus(earned, registered)` | >= 25% gate check. |
+| `calcBacklogImpact(cgpa, totalCredits, failedCredits, targetGP)` | Simulates supplementary -> new CGPA. |
 
-#### App Shell & Core (Session 1)
-| File | Status |
-|---|---|
-| `src/main.tsx` | ✅ |
-| `src/App.tsx` | ✅ |
-| `src/index.css` | ✅ |
-| `src/types/index.ts` | ✅ |
-| `src/db/schema.ts` | ✅ |
-| `src/constants/grading.ts` | ✅ |
-| `src/lib/calculations.ts` | ✅ |
-| `src/lib/notifications.ts` | ✅ |
+### Aggregate Safe-Skip Formula
 
-#### Zustand Stores (Session 1)
-| File | Status |
-|---|---|
-| `src/stores/useProfileStore.ts` | ✅ |
-| `src/stores/useSemesterStore.ts` | ✅ |
-| `src/stores/useAttendanceStore.ts` | ✅ |
-| `src/stores/useTaskStore.ts` | ✅ |
-| `src/stores/useExamStore.ts` | ✅ |
-| `src/stores/useUIStore.ts` | ✅ |
-
-#### Hooks (Session 2)
-| File | Status |
-|---|---|
-| `src/hooks/useAttendance.ts` | ✅ |
-| `src/hooks/useSubjects.ts` | ✅ |
-| `src/hooks/useTodaySchedule.ts` | ✅ |
-
-#### Design System — UI Primitives (Session 2)
-| File | Status |
-|---|---|
-| `src/components/ui/Button.tsx` | ✅ |
-| `src/components/ui/Card.tsx` | ✅ |
-| `src/components/ui/Badge.tsx` | ✅ |
-| `src/components/ui/ProgressRing.tsx` | ✅ |
-| `src/components/ui/ProgressBar.tsx` | ✅ |
-| `src/components/ui/BottomNav.tsx` | ✅ |
-| `src/components/ui/Sidebar.tsx` | ✅ |
-| `src/components/ui/Modal.tsx` | ✅ |
-| `src/components/ui/Input.tsx` | ✅ |
-| `src/components/ui/Select.tsx` | ✅ |
-| `src/components/ui/Chip.tsx` | ✅ |
-| `src/components/ui/FAB.tsx` | ✅ |
-| `src/components/ui/EmptyState.tsx` | ✅ |
-| `src/components/ui/Skeleton.tsx` | ✅ |
-| `src/components/ui/Toast.tsx` | ✅ |
-
-#### Feature Components (Session 3)
-| File | Status |
-|---|---|
-| `src/components/attendance/AttendanceCard.tsx` | ✅ |
-| `src/components/attendance/BunkingBudget.tsx` | ✅ |
-| `src/components/attendance/HeatmapCalendar.tsx` | ✅ |
-| `src/components/grades/SubjectMarksCard.tsx` | ✅ |
-| `src/components/grades/CGPAChart.tsx` | ✅ |
-| `src/components/grades/WhatIfSimulator.tsx` | ✅ Upgraded — per-subject grade target grid, tap-to-set slider, SGPA target calculator, pass condition display |
-| `src/components/tasks/TaskItem.tsx` | ✅ |
-
-#### Onboarding Steps (Session 3)
-| File | Status |
-|---|---|
-| `src/pages/Onboarding/index.tsx` | ✅ |
-| `src/pages/Onboarding/steps/Welcome.tsx` | ✅ |
-| `src/pages/Onboarding/steps/Profile.tsx` | ✅ Fixed — `setProfile()` on first run, `updateProfile()` on revisit |
-| `src/pages/Onboarding/steps/University.tsx` | ✅ |
-| `src/pages/Onboarding/steps/Semester.tsx` | ✅ |
-| `src/pages/Onboarding/steps/Subjects.tsx` | ✅ |
-| `src/pages/Onboarding/steps/Done.tsx` | ✅ |
-
-#### Pages (Sessions 2–3)
-| File | Status |
-|---|---|
-| `src/pages/Dashboard/index.tsx` | ✅ Full implementation |
-| `src/pages/Attendance/index.tsx` | ✅ Full implementation |
-| `src/pages/Grades/index.tsx` | ✅ Full implementation |
-| `src/pages/Tasks/index.tsx` | ✅ Full implementation — filter tabs (all/overdue/today/upcoming/done), add modal |
-| `src/pages/Assignments/index.tsx` | ✅ Full implementation — task-store-backed dedicated view for assignments, filtering and specific types |
-| `src/pages/Timetable/index.tsx` | ✅ Full implementation — day selector, slot list, add/delete period modal |
-| `src/pages/Exams/index.tsx` | ✅ Full implementation — live countdown chips, filtering, upcoming/past sections, edit/add modal |
-| `src/pages/Syllabus/index.tsx` | ✅ Full implementation — subject list → unit/topic drill-down, status cycling, unit/topic add |
-| `src/pages/Notes/index.tsx` | ✅ Full implementation — subject + category filters, pin/unpin, delete, external links |
-| `src/pages/Calendar/index.tsx` | ✅ Full implementation — monthly calendar view with holidays, exams, and task deadlines |
-| `src/pages/Settings/index.tsx` | ✅ Full implementation — profile management, university/grading, theme toggling, data management |
-| `src/pages/Subjects/index.tsx` | ✅ Full implementation — subjects management with color-coded grouped views |
-| `src/pages/Semesters/index.tsx` | ✅ Full implementation — semesters management with active/archive logic and progress tracking |
-| `src/pages/Labs/index.tsx` | ✅ Full implementation — lab marks entry page with CIE/SEE breakdowns |
-| `src/pages/NCS/index.tsx` | ✅ Full implementation — no-credit subjects tracker with attendance checks |
-
----
-
-### 13.3 Build Fix Log
-
-#### Build Fix Session — 2026-04-01
-
-> `pnpm build` failed with TypeScript strict-mode errors (TS6133 unused imports/variables).  
-> All errors were unused imports or variables — zero logic changes required.
-
-| File | Fix Applied |
-|---|---|
-| `src/components/attendance/AttendanceCard.tsx` | Removed unused `import { ATTENDANCE_ZONES }` — the import was never referenced anywhere in the component |
-| `src/components/grades/SubjectMarksCard.tsx` | Removed unused `clsx` import |
-| `src/components/tasks/TaskItem.tsx` | Removed unused `onDelete` destructure; replaced non-existent `dueDate.isToday?.()` with `dueDate.isSame(dayjs(), 'day')` |
-| `src/components/ui/Skeleton.tsx` | Added `style?: CSSProperties` to `SkeletonProps` interface |
-| `src/hooks/useAttendance.ts` | Replaced unmaintainable conditional type inference with explicit typed signatures |
-| `src/lib/calculations.ts` | Removed unused imports: `LabMarks`, `CGPAResult`, `JNTUH_TOTAL_CREDITS` |
-| `src/pages/Attendance/index.tsx` | Removed unused `summaries` destructure |
-| `src/pages/Grades/index.tsx` | Removed unused imports; fixed `useLiveQuery` generic types |
-| `src/pages/Onboarding/index.tsx` | Removed unused `db` import |
-| `src/pages/Onboarding/steps/University.tsx` | Removed unused `degree` variable from `watch()` |
-
-**Current build status: ✅ Passing** — `pnpm build` completes with 0 errors.
-
----
-
-### 13.4 Install & Run
-
-```bash
-cd C:\Users\hehehe\Documents\Dev\AcadFlow
-
-pnpm install
-pnpm dev           # http://localhost:5173
-
-pnpm build         # tsc + vite build → dist/
-pnpm cap:sync      # sync to Android project
-pnpm cap:open      # open Android Studio → build APK
+```
+aggregateSafeSkips = floor(totalAttended / 0.75 - totalHeld)
 ```
 
----
+Derivation: `attended / (held + x) >= 0.75` => `x <= attended / 0.75 - held`.
 
-### 13.5 Session 4 — Developer Progress Update
-
-> Fetched and audited on 2026-04-02. Changes made directly by developer since Session 3.
-
-#### Pages promoted from stubs to full implementations
-| Page | What was built |
-|---|---|
-| `Tasks` | Filter tabs (all/overdue/today/upcoming/done), add-task modal with type/priority/subject/due-datetime, live pending count |
-| `Timetable` | Day selector bar with per-day slot counts, period cards with colour strips, add/delete period modal |
-| `Exams` | Improved — live countdown chips (d/h/m) with 1m tick, upcoming/past split, subject and type filters, edit exam modal |
-| `Syllabus` | Two-screen drill-down: subject list → unit/topic detail; topic status cycles on tap (NotStarted→InProgress→Completed→RevisionDone); per-unit and overall progress bars |
-| `Notes` | Subject + category dual filter, pin/unpin, delete, external link support, textarea for quick notes |
-| `Assignments` | New — Task-store-backed dedicated view for assignments with filtering (Overdue, This Week, etc.) and specific assignment-type categorization |
-| `Calendar` | New — Monthly calendar grid that aggregates holidays, exams, and task deadlines |
-| `Settings` | New — Profile management, university/grading scale configuration, theme toggling, and data management (Export/Import/Clear) |
-| `Subjects` | New — Management view for subjects, color-coded cards, type categorization (Theory/Lab/NoCredit), CRUD |
-| `Semesters` | New — Semester management with progress tracking, active/archive switching, and creation/editing |
-| `Labs` | New — Dedicated lab marks tracker following JNTUH R-25 Clause 9.5 (CIE 40/SEE 60 breakdown) |
-| `NCS` | New — Dedicated view for No-Credit subjects tracking with R-25 impact notices |
-
-#### Component upgrades
-| Component | Upgrade |
-|---|---|
-| `WhatIfSimulator.tsx` | Per-subject grade target grid (tap to set slider to exact SEE needed); SGPA target calculator with gap analysis; pass condition reminder; onboarding hint banner; SGPA colour coding |
-| `App.tsx` | Extended Routes to include new Assignments, Subjects, Semesters, Labs, and NCS pages |
-| `Sidebar.tsx` | Extended navigation Sidebar to include the newly integrated pages |
-
-#### Bug fixes
-| File | Fix |
-|---|---|
-| `steps/Profile.tsx` | First-run now calls `setProfile()` to create a full profile object; revisits use `updateProfile()` |
-| `calculations.ts` | `safeSkips`/`catchUpNeeded` intentionally zeroed in `calcSubjectAttendance` — JNTUH R-25 uses aggregate attendance for detention, not per-subject |
-| `App.tsx` / `Exams.tsx` | Resolved deep TS lint errors over unused variables post refactoring |
-
-#### Still pending
-| File | Status |
-|---|---|
-| `N/A` | `✨ All application pages fully implemented.` |
+The broken formula `totalAttended - ceil(totalHeld x 0.75)` underestimates the budget because the denominator grows as you skip more. This has been corrected.
 
 ---
 
-*Spec last updated: 2026-04-02 — v1.4. All 68 core files fully implemented. Ready for next QA/E2E testing phase.*
+## 12. Notification System
+
+**File:** `src/lib/notifications.ts` — uses `@capacitor/local-notifications`. Silently no-ops on web. Notification IDs are deterministic string hashes (cancellable without DB storage).
+
+### Android Channels
+
+| Channel | Importance | Vibration |
+|---|---|---|
+| exams | HIGH (4) | Yes |
+| tasks | HIGH (4) | Yes |
+| attendance | DEFAULT (3) | No |
+
+Channels created once on app init via `createNotificationChannels()` in `main.tsx`.
+
+| Function | Triggers |
+|---|---|
+| scheduleExamNotifications | 7d, 3d, 1d, and morning-of at 8 AM |
+| scheduleTaskNotifications | 24h and 1h before due datetime |
+| scheduleAttendanceReminder | Daily 10min before first class, next 90 days (batched <= 60) |
+
+---
+
+## 13. Roadmap
+
+### SCRAPER-001 — Universal Portal Scraper (🛠️ In Progress — Phase 1 Complete)
+
+Auto-imports attendance, marks, and subjects from any college portal. Adapter pattern — one file per portal implementing a shared `PortalAdapter` interface.
+
+**Platform HTTP strategy:**
+
+| Platform | Approach |
+|---|---|
+| Electron | IPC → Node fetch (no CORS) via `electron/scraper-bridge.js` |
+| Android | `@capacitor/http` native plugin (bypasses WebView CORS) |
+| Web | Throws `ScraperNotSupportedError` — shows "use desktop or Android" |
+
+**Implementation status — Phase 1 (Infrastructure): ✅ Complete**
+
+| File | Purpose | Status |
+|---|---|---|
+| `src/lib/scraper/types.ts` | `PortalAdapter` interface, `SessionData`, `ScrapedAttendance`, `ScrapedMarks`, `ScrapedSubject`, `SyncResult` | ✅ Done |
+| `src/lib/scraper/http.ts` | Platform-aware HTTP layer | ✅ Done |
+| `src/lib/scraper/crypto.ts` | Credential encryption (Electron `safeStorage` + AES-GCM) | ✅ Done |
+| `src/lib/scraper/index.ts` | Orchestrator: `login()`, `syncAll()`, `scheduleDaily()` | ✅ Done |
+| `src/lib/scraper/scheduler.ts` | Daily sync with 20h interval guard | ✅ Done |
+| `src/lib/scraper/adapters/index.ts` | Adapter registry + `getAdapter()` helper | ✅ Done |
+| `src/lib/scraper/adapters/tkrec.ts` | TKREC (`tkrec.in`) adapter — login, attendance, marks, subjects | ✅ Done |
+| `src/stores/usePortalStore.ts` | Portal config + sync state + log | ✅ Done |
+| `src/pages/Import/index.tsx` | Full portal sync UI (adapter picker, credentials, log) | ✅ Done |
+| `electron/scraper-bridge.js` | Node-side IPC `'scraper:fetch'` handler | ✅ Done |
+| `electron/main.js` | Registers bridge IPC + wires scheduler on window focus | ✅ Done |
+| `electron/preload.js` | Exposes full `window.scraperBridge` API via `contextBridge` | ✅ Done |
+| `src/main.tsx` | Wires Android `appStateChange` + Electron `onCheckSync` | ✅ Done |
+| `src/App.tsx` | `/import` route added | ✅ Done |
+| `src/pages/Settings/index.tsx` | Portal Sync row in Data section + quick-link | ✅ Done |
+| `src/components/ui/Sidebar.tsx` | Import nav item with live status dot | ✅ Done |
+
+**Architecture decisions (locked):**
+- Adapter pattern: one file per portal implementing `PortalAdapter`
+- Conflict resolution: portal data always wins (overwrites local for same `subjectId + semesterId`)
+- Sync schedule: daily at app open (if > 20h since last sync) + manual trigger button
+- Credentials: encrypted locally — never in IndexedDB or `localStorage`. User may opt out and enter each time.
+- First adapter: TKREC (`tkrec.in`) — dev credentials in `portal_dev_credentials_for_tkrec.in.md` (gitignored)
+
+For the full adapter authoring guide, see `DEV_DOCS.md §14`.
+
+### Supabase Cloud Sync (V1.2)
+
+Cross-device backup via Supabase Auth (Google SSO) + Postgres + Realtime. Architecture ready — env vars scaffolded, `UserProfile.id` is a UUID.
+
+### Other Planned Features
+
+- **Android Home Screen Widget (V1.1):** Aggregate attendance % + next exam countdown.
+- **Google Calendar Sync (V1.3):** Push exam dates and deadlines via OAuth.
+- **Flux AI Nudges (V2.1):** Contextual nudges, auto-generated study schedule, overloaded week warnings.
+
+---
+
+## 14. Known Gaps
+
+| Item | Status | Notes |
+|---|---|---|
+| Portal scraper | 🛠️ In Progress | Phase 1 (infrastructure + TKREC adapter) complete. See §13 and `DEV_DOCS.md §14` for details. |
+| PWA icons | Empty | public/icons/ has no actual icon files -- PWA installability incomplete |
+| Supabase sync | Planned | Architecture ready, not built |
+| Vitest unit tests | None | src/lib/calculations.ts is the priority target |
+| Playwright E2E | None | Priority: onboarding, attendance mark -> %, CGPA update |
+| Android back-button | Not wired | @capacitor/app installed, App.addListener not called in main.tsx |
+| Haptic feedback | Not wired | @capacitor/haptics installed, not triggered on events |
+| KaTeX in Notes | Planned | richText stored as plain string currently |
+| Timetable overrides | Schema only | timetableOverrides table exists, no UI |
+| Flux animations | V1.1 | Lottie animations planned |
+| Settings version string | Mismatch | Hardcodes v1.5; package.json has 0.1.0 |
+| JetBrains Mono | Not imported | Declared in Tailwind mono but no font import -- system fallback |
+| font-display Tailwind class | Undefined | Used in Sidebar.tsx wordmark, not in tailwind.config.ts -- falls back to sans |

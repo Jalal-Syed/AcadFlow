@@ -1,0 +1,4 @@
+allowBuilds:
+  core-js: false
+  electron: false
+  esbuild: false

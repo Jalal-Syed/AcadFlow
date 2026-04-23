@@ -14,15 +14,17 @@ import EmptyState from '@/components/ui/EmptyState'
 import FAB from '@/components/ui/FAB'
 import Badge from '@/components/ui/Badge'
 import type { Semester } from '@/types'
-import { Layers, CheckCircle2, Archive, Calendar, BookOpen, Pencil, Hash, AlignLeft, Beaker } from 'lucide-react'
+import { Layers, CheckCircle2, Archive, Calendar, BookOpen, Pencil, Hash, AlignLeft, Beaker, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export default function SemestersPage() {
-  const { semesters, subjects, activeSemesterId, addSemester, updateSemester, setActiveSemester, archiveSemester } = useSemesterStore()
+  const { semesters, subjects, activeSemesterId, addSemester, updateSemester, setActiveSemester, archiveSemester, removeSemester } = useSemesterStore()
   const { updateProfile } = useProfileStore()
 
   const [showAdd, setShowAdd] = useState(false)
   const [editingSem, setEditingSem] = useState<Semester | null>(null)
+  const [deletingSem, setDeletingSem] = useState<Semester | null>(null)
+  const [deleteStep, setDeleteStep] = useState(0) // 0=idle 1=confirm1 2=confirm2 3=confirm3
 
   // Form state
   const [semNumber, setSemNumber] = useState(1)
@@ -100,6 +102,23 @@ export default function SemestersPage() {
     archiveSemester(sem.id)
   }
 
+  const openDelete = (sem: Semester) => {
+    setDeletingSem(sem)
+    setDeleteStep(1)
+  }
+
+  const handleDeleteStep = () => {
+    if (deleteStep < 3) { setDeleteStep(s => s + 1); return }
+    if (!deletingSem) return
+    removeSemester(deletingSem.id)
+    if (activeSemesterId === deletingSem.id) {
+      const next = semesters.find(s => s.id !== deletingSem.id && !s.isArchived)
+      if (next) setActiveSemester(next.id)
+    }
+    setDeletingSem(null)
+    setDeleteStep(0)
+  }
+
   const handleUnarchive = (sem: Semester) => {
     updateSemester(sem.id, { isArchived: false, isActive: false })
   }
@@ -141,6 +160,7 @@ export default function SemestersPage() {
                     onSetActive={() => handleSetActive(sem)}
                     onArchive={() => handleArchive(sem)}
                     onEdit={() => openEdit(sem)}
+                    onDelete={() => openDelete(sem)}
                   />
                 ))}
             </section>
@@ -252,6 +272,43 @@ export default function SemestersPage() {
           </Button>
         </div>
       </Modal>
+
+      {/* ─── Delete confirmation modal (3-step) ─────────────── */}
+      <Modal
+        open={!!deletingSem && deleteStep > 0}
+        onClose={() => { setDeletingSem(null); setDeleteStep(0) }}
+        title="Delete Semester"
+        size="sm"
+      >
+        {deletingSem && (
+          <div className="space-y-4">
+            <div className="bg-[rgba(255,71,87,0.08)] border border-[#FF4757]/30 rounded-xl px-4 py-3 space-y-1">
+              <p className="text-[#FF4757] text-sm font-semibold">
+                {deleteStep === 1 && '⚠️ Are you sure?'}
+                {deleteStep === 2 && '⚠️ Really sure? This cannot be undone.'}
+                {deleteStep === 3 && '🚨 Final confirmation — all data will be lost.'}
+              </p>
+              <p className="text-text/50 text-xs leading-relaxed">
+                Deleting <strong>Semester {deletingSem.number} ({deletingSem.academicYear})</strong> will
+                permanently remove it along with all its subjects.
+                Attendance records, marks, and tasks linked to this semester are <strong>not</strong> removed from the database automatically.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button fullWidth variant="secondary" onClick={() => { setDeletingSem(null); setDeleteStep(0) }}>
+                Cancel
+              </Button>
+              <Button fullWidth variant="danger" onClick={handleDeleteStep}>
+                <Trash2 size={14} />
+                {deleteStep === 1 && 'Yes, delete'}
+                {deleteStep === 2 && 'Confirm delete'}
+                {deleteStep === 3 && 'Delete forever'}
+              </Button>
+            </div>
+            <p className="text-center text-[10px] text-text/20">Confirmation {deleteStep} of 3</p>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
@@ -266,6 +323,7 @@ function SemesterCard({
   onSetActive,
   onArchive,
   onEdit,
+  onDelete,
 }: {
   semester: Semester
   isActive: boolean
@@ -274,6 +332,7 @@ function SemesterCard({
   onSetActive: () => void
   onArchive: () => void
   onEdit: () => void
+  onDelete: () => void
 }) {
   const now = dayjs()
   const start = dayjs(semester.startDate)
@@ -355,6 +414,12 @@ function SemesterCard({
           className="text-[10px] text-text/25 hover:text-[#FFA502] flex items-center gap-1 ml-auto"
         >
           <Archive size={10} />Archive
+        </button>
+        <button
+          onClick={onDelete}
+          className="text-[10px] text-text/20 hover:text-[#FF4757] flex items-center gap-1"
+        >
+          <Trash2 size={10} />Delete
         </button>
       </div>
     </div>

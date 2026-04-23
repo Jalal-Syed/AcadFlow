@@ -27,28 +27,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@a3252b7022090dea0b7b3a20e1e57a1e8d9e0f9f # v3.0.0
         with:
           version: 9
 
-      - name: Get pnpm store path
-        id: pnpm-cache
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          node-version: '20'
+          cache: 'pnpm'  # setup-node handles pnpm store caching natively
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -57,13 +47,13 @@ jobs:
         run: pnpm build
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@00854ea68c109d98c75d956347303bf7c45b0277 # v3.2.1
 
       - name: Install Android platform 34
         run: echo "y" | sdkmanager "platforms;android-34" "build-tools;34.0.0"
@@ -90,7 +80,7 @@ jobs:
              android/app/build/outputs/apk/debug/AcadFlow-${VERSION}-android.apk
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: android-apk
           path: android/app/build/outputs/apk/debug/AcadFlow-*.apk
@@ -128,34 +118,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@a3252b7022090dea0b7b3a20e1e57a1e8d9e0f9f # v3.0.0
         with:
           version: 9
 
-      - name: Get pnpm store path (Unix)
-        if: runner.os != 'Windows'
-        id: pnpm-cache-unix
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Get pnpm store path (Windows)
-        if: runner.os == 'Windows'
-        id: pnpm-cache-win
-        run: echo "STORE_PATH=$(pnpm store path)" >> $env:GITHUB_OUTPUT
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - name: Set up Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          path: ${{ steps.pnpm-cache-unix.outputs.STORE_PATH || steps.pnpm-cache-win.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          node-version: '20'
+          cache: 'pnpm'  # setup-node handles pnpm store caching natively (cross-platform)
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -176,7 +150,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload desktop artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ matrix.artifact_name }}
           path: ${{ matrix.artifact_path }}
@@ -193,28 +167,28 @@ jobs:
 
     steps:
       - name: Checkout (for release notes)
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Download Android APK
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: android-apk
           path: artifacts/android
 
       - name: Download Windows EXE
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: windows-exe
           path: artifacts/windows
 
       - name: Download Linux AppImage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: linux-appimage
           path: artifacts/linux
 
       - name: Download macOS DMG
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: macos-dmg
           path: artifacts/macos
@@ -223,7 +197,7 @@ jobs:
         run: find artifacts/ -type f | sort
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@da05d552573ad5aba39571d65e131e1e9a5c5d20 # v2.2.2
         with:
           name: AcadFlow ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}

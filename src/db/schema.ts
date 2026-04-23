@@ -98,7 +98,6 @@ export class AcadFlowDB extends Dexie {
 
       table.hook('updating', (mods: Record<string, unknown>) => {
         mods.updatedAt = new Date().toISOString()
-        return mods
       })
     }
   }

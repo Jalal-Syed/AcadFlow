@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@a3252b7022090dea0b7b3a20e1e57a1e8d9e0f9f # v3.0.0
+        uses: pnpm/action-setup@v4 # v4.0.0
         with:
           version: 9
 
@@ -121,7 +121,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@a3252b7022090dea0b7b3a20e1e57a1e8d9e0f9f # v3.0.0
+        uses: pnpm/action-setup@v4 # v4.0.0
         with:
           version: 9
 

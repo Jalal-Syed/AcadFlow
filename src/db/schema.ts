@@ -96,7 +96,7 @@ export class AcadFlowDB extends Dexie {
         if (!obj.createdAt) obj.createdAt = now
       })
 
-      table.hook('updating', (mods: Record<string, unknown>) => {
+      ;(table.hook as any)('updating', (mods: Record<string, unknown>) => {
         mods.updatedAt = new Date().toISOString()
       })
     }

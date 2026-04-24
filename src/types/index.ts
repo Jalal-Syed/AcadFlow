@@ -63,7 +63,7 @@ export interface Semester {
   isActive: boolean
   isArchived: boolean
   totalWorkingDays?: number
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Subject ────────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ export interface Subject {
   isODCountedPresent: boolean
   isMedicalExcluded: boolean
   order: number                    // display order
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Attendance ─────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ export interface AttendanceRecord {
   status: AttendanceStatus
   isMidtermBonusDay: boolean       // true = this day adds bonus hour
   note?: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface AttendanceSummary {
@@ -140,7 +140,7 @@ export interface TheoryMarks {
   seeEntered: boolean
   // Status
   status: SubjectStatus
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Marks — Lab ───────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ export interface LabMarks {
   seeVivaVoce: number | null       // /10
   seeEntered: boolean
   status: SubjectStatus
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Tasks ──────────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ export interface Task {
   recurringPattern?: 'daily' | 'weekly' | 'biweekly'
   attachmentUrls: string[]
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Exams ──────────────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ export interface Exam {
   syllabusUnitIds: string[]        // linked syllabus units
   notificationsScheduled: boolean
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Timetable ──────────────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ export interface TimetableSlot {
   room?: string
   isLab: boolean                   // lab = 2-hour block
   label?: string                   // e.g. "Lunch Break"
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface TimetableOverride {
@@ -237,7 +237,7 @@ export interface TimetableOverride {
   newEndTime?: string
   newRoom?: string
   note?: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Syllabus ───────────────────────────────────────────────────────────────
@@ -256,7 +256,7 @@ export interface SyllabusUnit {
   name: string                     // e.g. "Unit 1: Introduction to DBMS"
   order: number
   topics: SyllabusTopic[]
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Notes ──────────────────────────────────────────────────────────────────
@@ -273,7 +273,7 @@ export interface Note {
   isPinned: boolean
   studySetId?: string
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface StudySet {
@@ -283,7 +283,7 @@ export interface StudySet {
   noteIds: string[]
   examId?: string
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Calendar ───────────────────────────────────────────────────────────────
@@ -294,7 +294,7 @@ export interface Holiday {
   date: string
   name: string
   type: HolidayType
-  updatedAt: string
+  updatedAt?: string
 }
 
 // ─── Computed / UI State ────────────────────────────────────────────────────

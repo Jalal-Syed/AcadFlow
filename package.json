@@ -1,5 +1,5 @@
 {
-  "name": "acadflow",
+  "name": "AcadFlow",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -92,7 +92,7 @@
     "publish": {
       "provider": "github",
       "owner": "Jalal-Syed",
-      "repo": "AcademicTracker"
+      "repo": "AcadFlow"
     },
     "directories": {
       "output": "release-builds",

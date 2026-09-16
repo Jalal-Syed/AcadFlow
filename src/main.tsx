@@ -58,10 +58,6 @@ async function bootstrap() {
     }
     check()
   })
-  if (useAuthStore.getState().status === 'authenticated') {
-    await useSyncStore.getState().sync()
-  }
-
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <Router>
@@ -69,6 +65,12 @@ async function bootstrap() {
       </Router>
     </React.StrictMode>
   )
+
+  // Render first; cloud hydration must not leave the native WebView blank
+  // while waiting on network access.
+  if (useAuthStore.getState().status === 'authenticated') {
+    void useSyncStore.getState().sync()
+  }
 }
 
 bootstrap()

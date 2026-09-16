@@ -30,6 +30,9 @@ jobs:
   build-android:
     name: 🤖 Android APK
     runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
     steps:
       - name: Checkout
@@ -50,6 +53,11 @@ jobs:
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify Supabase build configuration
+        run: |
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_ANON_KEY"
 
       - name: Build Vite web app
         run: pnpm build
@@ -131,6 +139,9 @@ jobs:
             artifact_path: release-builds/*.dmg
 
     runs-on: ${{ matrix.os }}
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
     steps:
       - name: Checkout
@@ -151,6 +162,12 @@ jobs:
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify Supabase build configuration
+        shell: bash
+        run: |
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_ANON_KEY"
 
       # Linux: install native deps needed by electron-builder for AppImage
       - name: Install Linux build deps

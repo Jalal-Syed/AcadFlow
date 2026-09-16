@@ -82,7 +82,7 @@ export default function SubjectsPage() {
     setSaving(true)
 
     if (editingSubject) {
-      updateSubject(editingSubject.id, {
+      await updateSubject(editingSubject.id, {
         name: name.trim(),
         code: code.trim().toUpperCase(),
         credits,
@@ -102,16 +102,16 @@ export default function SubjectsPage() {
         isMedicalExcluded: false,
         order: subjects.length,
       }
-      addSubject(subject)
+      await addSubject(subject)
     }
 
     setSaving(false)
     setShowModal(false)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (showDelete) {
-      removeSubject(showDelete)
+      await removeSubject(showDelete)
       setShowDelete(null)
     }
   }

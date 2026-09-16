@@ -151,7 +151,7 @@ async function pullAndMerge(userId: string, lastSyncAt: string | null): Promise<
     const row = profileRows[0]
     const { profile } = useProfileStore.getState()
     if (!profile || row.updated_at > (profile.updatedAt ?? '')) {
-      useProfileStore.getState().setProfile(row.data as unknown as UserProfile)
+      await useProfileStore.getState().setProfile(row.data as unknown as UserProfile)
     }
   }
 
@@ -163,9 +163,9 @@ async function pullAndMerge(userId: string, lastSyncAt: string | null): Promise<
       const remote = row.data as unknown as Semester
       const local = semesters.find(s => s.id === remote.id)
       if (!local) {
-        useSemesterStore.getState().addSemester(remote)
+        await useSemesterStore.getState().addSemester(remote)
       } else if (row.updated_at > (local.updatedAt ?? '')) {
-        useSemesterStore.getState().updateSemester(remote.id, remote)
+        await useSemesterStore.getState().updateSemester(remote.id, remote)
       }
     }
   }
@@ -178,9 +178,9 @@ async function pullAndMerge(userId: string, lastSyncAt: string | null): Promise<
       const remote = row.data as unknown as Subject
       const local = subjects.find(s => s.id === remote.id)
       if (!local) {
-        useSemesterStore.getState().addSubject(remote)
+        await useSemesterStore.getState().addSubject(remote)
       } else if (row.updated_at > (local.updatedAt ?? '')) {
-        useSemesterStore.getState().updateSubject(remote.id, remote)
+        await useSemesterStore.getState().updateSubject(remote.id, remote)
       }
     }
   }
@@ -194,6 +194,10 @@ export async function syncNow(
   userId: string,
   lastSyncAt: string | null,
 ): Promise<{ count: number }> {
+  // Cloud is authoritative. Hydrate the local cache before considering any
+  // local record for upload so an older device cannot overwrite newer data.
+  const remoteCount = await pullAndMerge(userId, null)
+
   let pushCount = 0
 
   for (const tableName of DEXIE_TABLES) {
@@ -203,5 +207,5 @@ export async function syncNow(
 
   const pullCount = await pullAndMerge(userId, lastSyncAt)
 
-  return { count: pushCount + pullCount }
+  return { count: remoteCount + pushCount + pullCount }
 }

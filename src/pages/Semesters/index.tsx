@@ -56,12 +56,12 @@ export default function SemestersPage() {
     setShowAdd(true)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!startDate || !endDate) return
     setSaving(true)
 
     if (editingSem) {
-      updateSemester(editingSem.id, {
+      await updateSemester(editingSem.id, {
         number: semNumber,
         academicYear,
         startDate,
@@ -69,7 +69,7 @@ export default function SemestersPage() {
       })
     } else {
       const semId = crypto.randomUUID()
-      addSemester({
+      await addSemester({
         id: semId,
         number: semNumber,
         academicYear,
@@ -88,14 +88,14 @@ export default function SemestersPage() {
     setShowAdd(false)
   }
 
-  const handleSetActive = (sem: Semester) => {
+  const handleSetActive = async (sem: Semester) => {
     setActiveSemester(sem.id)
     // Deactivate all others
     for (const s of semesters) {
-      if (s.id !== sem.id) updateSemester(s.id, { isActive: false })
+      if (s.id !== sem.id) await updateSemester(s.id, { isActive: false })
     }
-    updateSemester(sem.id, { isActive: true })
-    updateProfile({ currentSemester: sem.number })
+    await updateSemester(sem.id, { isActive: true })
+    await updateProfile({ currentSemester: sem.number })
   }
 
   const handleArchive = (sem: Semester) => {
@@ -107,10 +107,10 @@ export default function SemestersPage() {
     setDeleteStep(1)
   }
 
-  const handleDeleteStep = () => {
+  const handleDeleteStep = async () => {
     if (deleteStep < 3) { setDeleteStep(s => s + 1); return }
     if (!deletingSem) return
-    removeSemester(deletingSem.id)
+    await removeSemester(deletingSem.id)
     if (activeSemesterId === deletingSem.id) {
       const next = semesters.find(s => s.id !== deletingSem.id && !s.isArchived)
       if (next) setActiveSemester(next.id)

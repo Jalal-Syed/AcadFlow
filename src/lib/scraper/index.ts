@@ -14,6 +14,7 @@
 
 import type { CaptureResult, SyncResult, ScrapedAttendance, ScrapedMarks, ScrapedSubject } from './types'
 import { db } from '@/db/schema'
+import { deleteCloudRecord, upsertCloudRecord } from '@/lib/cloudRecords'
 import { useSemesterStore } from '@/stores/useSemesterStore'
 import type { Subject, AttendanceRecord } from '@/types'
 import { SUBJECT_COLORS } from '@/constants/grading'
@@ -92,7 +93,6 @@ async function syncSubjects(
       }
       // Add to store and DB (BUG-016)
       store.addSubject(newSubject)
-      await db.subjects.put(newSubject)
       byCode.set(s.code, newSubject)
     }
     synced++
@@ -128,9 +128,11 @@ async function syncAttendance(
       .where('semesterId').equals(semesterId)
       .and(r => r.subjectId === subject.id)
       .primaryKeys()
+    await Promise.all((existingIds as string[]).map(id => deleteCloudRecord('attendanceRecords', id)))
     if (existingIds.length > 0) await db.attendanceRecords.bulkDelete(existingIds as string[])
 
     const records = buildAttendanceRecords(att, subject.id, semesterId, store)
+    await Promise.all(records.map(record => upsertCloudRecord('attendanceRecords', record)))
     if (records.length > 0) await db.attendanceRecords.bulkAdd(records)
     synced += records.length
   }
@@ -156,6 +158,7 @@ async function syncAggregateAttendance(
       .where('semesterId').equals(semesterId)
       .and(r => r.subjectId === subject.id)
       .primaryKeys()
+    await Promise.all((existingIds as string[]).map(id => deleteCloudRecord('attendanceRecords', id)))
     if (existingIds.length > 0) await db.attendanceRecords.bulkDelete(existingIds as string[])
 
     const syntheticAtt: ScrapedAttendance = {
@@ -166,6 +169,7 @@ async function syncAggregateAttendance(
     }
     const store = useSemesterStore.getState()
     const records = buildAttendanceRecords(syntheticAtt, subject.id, semesterId, store)
+    await Promise.all(records.map(record => upsertCloudRecord('attendanceRecords', record)))
     if (records.length > 0) await db.attendanceRecords.bulkAdd(records)
     synced += records.length
   }
@@ -255,6 +259,7 @@ async function syncMarks(
       marks.hasCBT = marks.cbtMarks !== null
       marks.seeEntered = marks.seeMarks !== null
 
+      await upsertCloudRecord('theoryMarks', marks)
       await db.theoryMarks.put(marks)
     } else {
       const existing = await db.labMarks
@@ -281,6 +286,7 @@ async function syncMarks(
       const seeFields = [marks.seeWriteup, marks.seeExecution, marks.seeResults, marks.seePresentation, marks.seeVivaVoce]
       marks.seeEntered = seeFields.some(f => f !== null)
 
+      await upsertCloudRecord('labMarks', marks)
       await db.labMarks.put(marks)
     }
     synced++

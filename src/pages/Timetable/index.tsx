@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db/schema'
+import { deleteCloudRecord, upsertCloudRecord } from '@/lib/cloudRecords'
 import { useSemesterStore } from '@/stores/useSemesterStore'
 import { useSubjects } from '@/hooks/useSubjects'
 import Modal from '@/components/ui/Modal'
@@ -80,12 +81,14 @@ export default function TimetablePage() {
       room:        room.trim() || undefined,
       isLab,
     }
+    await upsertCloudRecord('timetableSlots', slot)
     await db.timetableSlots.add(slot)
     setSaving(false)
     closeModal()
   }
 
   const handleDelete = async (id: string) => {
+    await deleteCloudRecord('timetableSlots', id)
     await db.timetableSlots.delete(id)
   }
 

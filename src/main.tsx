@@ -46,10 +46,9 @@ initCapacitor()
 // Initialise Supabase auth — starts the onAuthStateChange listener and
 // hydrates the store from any existing session in localStorage.
 // After auth resolves, trigger a sync if authenticated.
-useAuthStore.getState().initialize()
+async function bootstrap() {
+  useAuthStore.getState().initialize()
 
-// Auto-sync on app start once auth status settles
-;(async () => {
   // Wait briefly for the auth session to hydrate from localStorage
   await new Promise<void>(resolve => {
     const check = () => {
@@ -60,14 +59,16 @@ useAuthStore.getState().initialize()
     check()
   })
   if (useAuthStore.getState().status === 'authenticated') {
-    useSyncStore.getState().sync()
+    await useSyncStore.getState().sync()
   }
-})()
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <Router>
-      <App />
-    </Router>
-  </React.StrictMode>
-)
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <Router>
+        <App />
+      </Router>
+    </React.StrictMode>
+  )
+}
+
+bootstrap()

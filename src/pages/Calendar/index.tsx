@@ -8,6 +8,7 @@ import { useState, useMemo } from 'react'
 import dayjs from 'dayjs'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db/schema'
+import { deleteCloudRecord, upsertCloudRecord } from '@/lib/cloudRecords'
 import { useSemesterStore } from '@/stores/useSemesterStore'
 import { useSubjects } from '@/hooks/useSubjects'
 import { useTaskStore } from '@/stores/useTaskStore'
@@ -146,19 +147,22 @@ export default function CalendarPage() {
   const handleAddHoliday = async () => {
     if (!hName.trim() || !hDate || !activeSemesterId) return
     setSaving(true)
-    await db.holidays.add({
+    const holiday: Holiday = {
       id: crypto.randomUUID(),
       semesterId: activeSemesterId,
       date: hDate,
       name: hName.trim(),
       type: hType,
-    })
+    }
+    await upsertCloudRecord('holidays', holiday)
+    await db.holidays.add(holiday)
     setSaving(false)
     setShowAddHoliday(false)
     setHName(''); setHDate(''); setHType('University')
   }
 
   const handleDeleteHoliday = async (id: string) => {
+    await deleteCloudRecord('holidays', id)
     await db.holidays.delete(id)
   }
 

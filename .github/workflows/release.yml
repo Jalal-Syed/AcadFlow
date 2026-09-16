@@ -13,9 +13,15 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and release'
+        required: true
+        type: string
 
 permissions:
-  contents: write   # needed to create GitHub Releases and upload assets
+  contents: write # needed to create GitHub Releases and upload assets
 
 jobs:
   # ══════════════════════════════════════════════════════════════════════════
@@ -28,17 +34,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4 # v4.0.0
         with:
           version: 9
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20'
-          cache: 'pnpm'  # setup-node handles pnpm store caching natively
+          node-version: '22'
+          cache: 'pnpm' # setup-node handles pnpm store caching natively
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -52,11 +60,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@00854ea68c109d98c75d956347303bf7c45b0277 # v3.2.1
+      - name: Set up Android SDK tools
+        run: |
+          SDKMANAGER_DIR="$(dirname "$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)")"
+          test -x "$SDKMANAGER_DIR/sdkmanager"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "$SDKMANAGER_DIR" >> "$GITHUB_PATH"
+          sdkmanager --version
 
       - name: Install Android platform 34
-        run: echo "y" | sdkmanager "platforms;android-34" "build-tools;34.0.0"
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       - name: Add Capacitor Android platform
         run: npx cap add android
@@ -75,7 +90,7 @@ jobs:
 
       - name: Rename APK with version tag
         run: |
-          VERSION="${{ github.ref_name }}"
+          VERSION="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
           mv android/app/build/outputs/apk/debug/app-debug.apk \
              android/app/build/outputs/apk/debug/AcadFlow-${VERSION}-android.apk
 
@@ -93,7 +108,7 @@ jobs:
   build-desktop:
     name: 🖥️ ${{ matrix.name }}
     strategy:
-      fail-fast: false   # if one platform fails, keep building the others
+      fail-fast: false # if one platform fails, keep building the others
       matrix:
         include:
           - name: Windows
@@ -119,17 +134,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4 # v4.0.0
         with:
           version: 9
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20'
-          cache: 'pnpm'  # setup-node handles pnpm store caching natively (cross-platform)
+          node-version: '22'
+          cache: 'pnpm' # setup-node handles pnpm store caching natively (cross-platform)
 
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
@@ -162,11 +179,16 @@ jobs:
   release:
     name: 🚀 GitHub Release
     needs: [build-android, build-desktop]
+    if: ${{ needs.build-android.result == 'success' && needs.build-desktop.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout (for release notes)
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Download Android APK
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -198,12 +220,13 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: AcadFlow ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
+          token: ${{ github.token }}
+          name: AcadFlow ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          prerelease: ${{ contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-beta') || contains(github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name, '-rc') }}
           body: |
-            ## AcadFlow ${{ github.ref_name }} 🦉
+            ## AcadFlow ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }} 🦉
 
             > Your semester, under control.
 
@@ -213,7 +236,7 @@ jobs:
 
             | Platform | File | Instructions |
             |---|---|---|
-            | 🤖 **Android** | `AcadFlow-${{ github.ref_name }}-android.apk` | Enable **Settings → Install unknown apps**, then open the APK |
+            | 🤖 **Android** | `AcadFlow-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}-android.apk` | Enable **Settings → Install unknown apps**, then open the APK |
             | 🪟 **Windows** | `AcadFlow-Setup-*.exe` | Run the installer, click through the wizard |
             | 🐧 **Linux** | `AcadFlow-*.AppImage` | `chmod +x AcadFlow-*.AppImage` then double-click or run it |
             | 🍎 **macOS** | `AcadFlow-*.dmg` | Open DMG, drag AcadFlow to Applications |
@@ -234,4 +257,4 @@ jobs:
             artifacts/linux/*.AppImage
             artifacts/macos/*.dmg
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}

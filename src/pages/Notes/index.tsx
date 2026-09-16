@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db/schema'
+import { deleteCloudRecord, upsertCloudRecord } from '@/lib/cloudRecords'
 import { useSubjects } from '@/hooks/useSubjects'
 import { useSemesterStore } from '@/stores/useSemesterStore'
 import EmptyState from '@/components/ui/EmptyState'
@@ -76,7 +77,7 @@ export default function NotesPage() {
     if (!title.trim() || !subjectId || !activeSemesterId) return
     setSaving(true)
     const now = new Date().toISOString()
-    await db.notes.add({
+    const note: Note = {
       id:           crypto.randomUUID(),
       semesterId:   activeSemesterId,
       subjectId,
@@ -88,16 +89,21 @@ export default function NotesPage() {
       isPinned:     false,
       createdAt:    now,
       updatedAt:    now,
-    })
+    }
+    await upsertCloudRecord('notes', note)
+    await db.notes.add(note)
     setSaving(false)
     closeModal()
   }
 
   const handleTogglePin = async (note: Note) => {
-    await db.notes.update(note.id, { isPinned: !note.isPinned, updatedAt: new Date().toISOString() })
+    const updated = { ...note, isPinned: !note.isPinned, updatedAt: new Date().toISOString() }
+    await upsertCloudRecord('notes', updated)
+    await db.notes.update(note.id, updated)
   }
 
   const handleDelete = async (id: string) => {
+    await deleteCloudRecord('notes', id)
     await db.notes.delete(id)
   }
 

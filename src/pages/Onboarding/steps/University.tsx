@@ -60,7 +60,7 @@ export default function UniversityStep({ onNext, onBack }: UniversityStepProps) 
 
   const uniId  = watch('universityId')
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     const semCount = SEMESTER_COUNT[data.degree] ?? Number(data.totalSemesters)
 
     // Find matching grading scale
@@ -69,7 +69,7 @@ export default function UniversityStep({ onNext, onBack }: UniversityStepProps) 
     )
     if (scaleEntry) setGradingScale(scaleEntry)
 
-    updateProfile({
+    await updateProfile({
       universityId:   data.universityId as UniversityId,
       degree:         data.degree as DegreeType,
       branch:         data.branch,

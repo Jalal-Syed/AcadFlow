@@ -1,18 +1,14 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Mail, ArrowRight, CheckCircle2, Loader2, Zap, AlertCircle } from 'lucide-react'
+import { Mail, CheckCircle2, Loader2, Zap, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/stores/useAuthStore'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 
 // ---------------------------------------------------------------------------
-// LoginPage — optional sign-in for cloud sync.
-// The app works fully without an account; this page is reachable from
-// Settings → "Sign in to sync" and from the /login route.
+// LoginPage — required entry point for cloud-first storage.
 // ---------------------------------------------------------------------------
 
 export default function LoginPage() {
-  const navigate = useNavigate()
   const { signInWithGoogle, signInWithEmail, magicLinkSentTo, clearMagicLinkSent } = useAuthStore()
 
   const [email, setEmail] = useState('')
@@ -51,10 +47,6 @@ export default function LoginPage() {
     } finally {
       setEmailLoading(false)
     }
-  }
-
-  const handleSkip = () => {
-    navigate('/')
   }
 
   // ── Magic link sent confirmation view ────────────────────────────────────
@@ -106,9 +98,6 @@ export default function LoginPage() {
             >
               Try a different email
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleSkip}>
-              Skip for now
-            </Button>
           </div>
         </div>
       </div>
@@ -137,7 +126,7 @@ export default function LoginPage() {
           </span>
         </div>
         <p className="text-sm" style={{ color: 'rgb(var(--color-text) / 0.5)' }}>
-          Sign in to sync your data across devices
+          Sign in to store your data securely in the cloud
         </p>
       </div>
 
@@ -233,23 +222,13 @@ export default function LoginPage() {
 
         {/* What they're signing up for */}
         <p className="text-xs text-center" style={{ color: 'rgb(var(--color-text) / 0.35)' }}>
-          Used only for cross-device sync. Your data stays on your device unless you enable sync.
+          Your academic data is stored in your private cloud account and available across devices.
         </p>
       </div>
 
-      {/* Skip */}
-      <button
-        onClick={handleSkip}
-        className="mt-6 flex items-center gap-1.5 text-sm transition-opacity hover:opacity-80"
-        style={{ color: 'rgb(var(--color-text) / 0.45)' }}
-      >
-        Skip for now
-        <ArrowRight size={14} />
-      </button>
-
       {/* Privacy note */}
       <p className="mt-3 text-xs" style={{ color: 'rgb(var(--color-text) / 0.25)' }}>
-        AcadFlow works fully offline. An account is never required.
+        An account is required to keep your academic data available across devices.
       </p>
     </div>
   )

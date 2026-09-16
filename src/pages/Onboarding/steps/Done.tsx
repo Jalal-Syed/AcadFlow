@@ -6,7 +6,7 @@ interface DoneProps {
 }
 
 export default function Done({ onFinish }: DoneProps) {
-  const { profile, updateProfile } = useProfileStore()
+  const { profile } = useProfileStore()
 
   return (
     <div className="flex flex-col items-center text-center gap-6">
@@ -43,7 +43,7 @@ export default function Done({ onFinish }: DoneProps) {
       </div>
 
       <button
-        onClick={() => { updateProfile({ onboardingComplete: true }); onFinish() }}
+        onClick={onFinish}
         className="w-full py-3.5 rounded-xl bg-[#2ED573] hover:bg-[#26bb62] text-[#0D0D14] font-bold text-sm transition-colors"
       >
         Open AcadFlow →

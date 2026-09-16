@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db/schema'
+import { upsertCloudRecord } from '@/lib/cloudRecords'
 import { useSemesterStore } from '@/stores/useSemesterStore'
 import { useSubjects } from '@/hooks/useSubjects'
 import { useProfileStore } from '@/stores/useProfileStore'
@@ -219,6 +220,7 @@ function EditLabModal({
       seeEntered: toNum(seeWriteup) !== null || toNum(seeExecution) !== null,
       status: 'AwaitingSEE',
     }
+    await upsertCloudRecord('labMarks', data)
     await db.labMarks.put(data)
     setSaving(false)
     onClose()

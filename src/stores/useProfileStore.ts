@@ -2,12 +2,13 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { UserProfile, GradingScale } from '@/types'
 import { JNTUH_R25 } from '@/constants/grading'
+import { upsertCloudRecord } from '@/lib/cloudRecords'
 
 interface ProfileState {
   profile: UserProfile | null
   gradingScale: GradingScale
-  setProfile: (p: UserProfile) => void
-  updateProfile: (partial: Partial<UserProfile>) => void
+  setProfile: (p: UserProfile) => Promise<void>
+  updateProfile: (partial: Partial<UserProfile>) => Promise<void>
   setGradingScale: (scale: GradingScale) => void
   clearProfile: () => void
 }
@@ -18,12 +19,19 @@ export const useProfileStore = create<ProfileState>()(
       profile: null,
       gradingScale: JNTUH_R25,
 
-      setProfile: (p) => set({ profile: { ...p, updatedAt: p.updatedAt ?? new Date().toISOString() } }),
+      setProfile: async (p) => {
+        const profile = { ...p, updatedAt: p.updatedAt ?? new Date().toISOString() }
+        await upsertCloudRecord('profile', profile)
+        set({ profile })
+      },
 
-      updateProfile: (partial) =>
-        set(state => ({
-          profile: state.profile ? { ...state.profile, ...partial, updatedAt: new Date().toISOString() } : null,
-        })),
+      updateProfile: async (partial) => {
+        const current = useProfileStore.getState().profile
+        if (!current) return
+        const profile = { ...current, ...partial, updatedAt: new Date().toISOString() }
+        await upsertCloudRecord('profile', profile)
+        set({ profile })
+      },
 
       setGradingScale: (scale) => set({ gradingScale: scale }),
 

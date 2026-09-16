@@ -31,9 +31,9 @@ export default function Profile({ onNext, onBack }: ProfileProps) {
     },
   })
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     if (!profile) {
-      setProfile({
+      await setProfile({
         id:                  crypto.randomUUID(),
         name:                data.name,
         college:             data.college,
@@ -50,7 +50,7 @@ export default function Profile({ onNext, onBack }: ProfileProps) {
         updatedAt:           new Date().toISOString(),
       })
     } else {
-      updateProfile({ name: data.name, college: data.college, rollNo: data.rollNo ?? '' })
+      await updateProfile({ name: data.name, college: data.college, rollNo: data.rollNo ?? '' })
     }
     onNext()
   }

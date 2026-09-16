@@ -37,9 +37,9 @@ export default function SemesterStep({ onNext, onBack }: SemesterStepProps) {
     },
   })
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     const semId = crypto.randomUUID()
-    addSemester({
+    await addSemester({
       id:               semId,
       number:           data.semesterNumber,
       academicYear:     data.academicYear,
@@ -49,7 +49,7 @@ export default function SemesterStep({ onNext, onBack }: SemesterStepProps) {
       isArchived:       false,
     })
     setActiveSemester(semId)
-    updateProfile({
+    await updateProfile({
       currentSemester:     data.semesterNumber,
       attendanceThreshold: data.attendanceThreshold,
     })

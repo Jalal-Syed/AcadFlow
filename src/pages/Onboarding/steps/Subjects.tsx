@@ -34,7 +34,7 @@ export default function SubjectsStep({ onNext, onBack }: SubjectsStepProps) {
     defaultValues: { name: '', code: '', credits: 3, type: 'Theory' },
   })
 
-  const onAdd = (data: FormData) => {
+  const onAdd = async (data: FormData) => {
     if (!activeSemesterId) return
     const subject: Subject = {
       id:                    crypto.randomUUID(),
@@ -49,7 +49,7 @@ export default function SubjectsStep({ onNext, onBack }: SubjectsStepProps) {
       isMedicalExcluded:     false,
       order:                 semSubjects.length,
     }
-    addSubject(subject)
+    await addSubject(subject)
     reset({ name: '', code: '', credits: 3, type: 'Theory' })
     setAdding(false)
   }

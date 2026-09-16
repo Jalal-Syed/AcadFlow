@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '@/db/schema'
+import { upsertCloudRecord } from '@/lib/cloudRecords'
 import { useSubjects } from '@/hooks/useSubjects'
 import EmptyState from '@/components/ui/EmptyState'
 import ProgressBar from '@/components/ui/ProgressBar'
@@ -130,13 +131,15 @@ function SubjectDetail({
   const handleAddUnit = async () => {
     if (!unitName.trim()) return
     setSaving(true)
-    await db.syllabusUnits.add({
+    const unit: SyllabusUnit = {
       id:        crypto.randomUUID(),
       subjectId,
       name:      unitName.trim(),
       order:     allUnits.length + 1,
       topics:    [],
-    })
+    }
+    await upsertCloudRecord('syllabusUnits', unit)
+    await db.syllabusUnits.add(unit)
     setSaving(false)
     setShowAddUnit(false)
     setUnitName('')
@@ -154,18 +157,24 @@ function SubjectDetail({
       status: 'NotStarted',
       order:  unit.topics.length + 1,
     }
-    await db.syllabusUnits.update(unitId, { topics: [...unit.topics, newTopic] })
+    const updatedUnit = { ...unit, topics: [...unit.topics, newTopic], updatedAt: new Date().toISOString() }
+    await upsertCloudRecord('syllabusUnits', updatedUnit)
+    await db.syllabusUnits.update(unitId, updatedUnit)
     setSaving(false)
     setShowAddTopic(null)
     setTopicName('')
   }
 
   const handleCycleTopic = async (unit: SyllabusUnit, topic: SyllabusTopic) => {
-    await db.syllabusUnits.update(unit.id, {
+    const updatedUnit = {
+      ...unit,
       topics: unit.topics.map(t =>
         t.id === topic.id ? { ...t, status: nextStatus(t.status) } : t
       ),
-    })
+      updatedAt: new Date().toISOString(),
+    }
+    await upsertCloudRecord('syllabusUnits', updatedUnit)
+    await db.syllabusUnits.update(unit.id, updatedUnit)
   }
 
   const progress = overallProgress()

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { AttendanceRecord, AttendanceStatus } from '@/types'
 import { db } from '@/db/schema'
+import { deleteCloudRecord, listCloudRecords, upsertCloudRecord } from '@/lib/cloudRecords'
 import dayjs from 'dayjs'
 
 interface AttendanceState {
@@ -21,13 +22,21 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   isLoaded: false,
 
   loadRecords: async (semesterId) => {
-    const records = await db.attendanceRecords.where('semesterId').equals(semesterId).toArray()
+    let records: AttendanceRecord[]
+    try {
+      const remote = await listCloudRecords<AttendanceRecord>('attendanceRecords')
+      records = remote.filter(record => record.semesterId === semesterId)
+      await db.attendanceRecords.bulkPut(remote)
+    } catch {
+      records = await db.attendanceRecords.where('semesterId').equals(semesterId).toArray()
+    }
     set({ records, isLoaded: true })
   },
 
   markAttendance: async (record) => {
     const id = crypto.randomUUID()
     const full: AttendanceRecord = { ...record, id }
+    await upsertCloudRecord('attendanceRecords', full)
     await db.attendanceRecords.add(full)
     set(state => ({ records: [...state.records, full] }))
   },
@@ -35,6 +44,9 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   updateRecord: async (id, status) => {
     // FIX NEW-BUG-02: stamp updatedAt in both DB and in-memory state so sync layer sees the change
     const updatedAt = new Date().toISOString()
+    const existing = get().records.find(record => record.id === id)
+    if (!existing) throw new Error('Attendance record not found.')
+    await upsertCloudRecord('attendanceRecords', { ...existing, status, updatedAt })
     await db.attendanceRecords.update(id, { status, updatedAt })
     set(state => ({
       records: state.records.map(r => r.id === id ? { ...r, status, updatedAt } : r),
@@ -62,11 +74,15 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       current = current.add(1, 'day')
     }
 
+    await Promise.all(records.map(record =>
+      upsertCloudRecord('attendanceRecords', record)
+    ))
     await db.attendanceRecords.bulkAdd(records)
     set(state => ({ records: [...state.records, ...records] }))
   },
 
   deleteRecord: async (id) => {
+    await deleteCloudRecord('attendanceRecords', id)
     await db.attendanceRecords.delete(id)
     set(state => ({ records: state.records.filter(r => r.id !== id) }))
   },

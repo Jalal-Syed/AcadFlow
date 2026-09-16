@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useProfileStore } from '@/stores/useProfileStore'
 import { useUIStore } from '@/stores/useUIStore'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { useSyncStore } from '@/stores/useSyncStore'
 
 // Layout
 import BottomNav from '@/components/ui/BottomNav'
@@ -31,6 +33,7 @@ import AuthCallbackPage from '@/pages/AuthCallback'
 export default function App() {
   const { profile } = useProfileStore()
   const { isDesktop, theme } = useUIStore()
+  const { status: authStatus } = useAuthStore()
 
   // Apply theme class to <html> so CSS custom properties switch correctly
   useEffect(() => {
@@ -38,7 +41,9 @@ export default function App() {
     document.documentElement.classList.add(theme)
   }, [theme])
 
-  const isOnboarded = !!profile?.onboardingComplete
+  useEffect(() => {
+    if (authStatus === 'authenticated') void useSyncStore.getState().sync()
+  }, [authStatus])
 
   // ── Auth routes (always accessible, regardless of onboarding state) ────────
   // These two routes must be reachable before onboarding completes, so they
@@ -49,6 +54,25 @@ export default function App() {
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
     </>
   )
+
+  if (authStatus === 'loading') {
+    return <div className="h-full bg-bg" />
+  }
+
+  if (authStatus === 'unauthenticated') {
+    return (
+      <div className="flex h-full bg-bg">
+        <div className="flex-1 flex flex-col w-full max-w-lg mx-auto min-w-0">
+          <Routes>
+            {authRoutes}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </div>
+      </div>
+    )
+  }
+
+  const isOnboarded = !!profile?.onboardingComplete
 
   // ── Onboarding flow ────────────────────────────────────────────────────────
   // Narrower max-width (512px) — appropriate for a focused multi-step form.

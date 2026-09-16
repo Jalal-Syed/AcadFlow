@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Task, TaskStatus } from '@/types'
 import { db } from '@/db/schema'
+import { deleteCloudRecord, listCloudRecords, upsertCloudRecord } from '@/lib/cloudRecords'
 import dayjs from 'dayjs'
 
 interface TaskState {
@@ -25,7 +26,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   isLoaded: false,
 
   loadTasks: async (semesterId) => {
-    const tasks = await db.tasks.where('semesterId').equals(semesterId).toArray()
+    let tasks: Task[]
+    try {
+      const remote = await listCloudRecords<Task>('tasks')
+      tasks = remote.filter(task => task.semesterId === semesterId)
+      await db.tasks.bulkPut(remote)
+    } catch {
+      tasks = await db.tasks.where('semesterId').equals(semesterId).toArray()
+    }
     // Auto-flag overdue
     const now = new Date().toISOString()
     const updated = tasks.map(t =>
@@ -37,12 +45,16 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   addTask: async (task) => {
     const now = new Date().toISOString()
     const full: Task = { ...task, id: crypto.randomUUID(), createdAt: now, updatedAt: now }
+    await upsertCloudRecord('tasks', full)
     await db.tasks.add(full)
     set(state => ({ tasks: [...state.tasks, full] }))
   },
 
   updateTask: async (id, partial) => {
     const updatedAt = new Date().toISOString()
+    const existing = get().tasks.find(task => task.id === id)
+    if (!existing) throw new Error('Task not found.')
+    await upsertCloudRecord('tasks', { ...existing, ...partial, updatedAt })
     await db.tasks.update(id, { ...partial, updatedAt })
     set(state => ({
       tasks: state.tasks.map(t => t.id === id ? { ...t, ...partial, updatedAt } : t),
@@ -54,6 +66,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   deleteTask: async (id) => {
+    await deleteCloudRecord('tasks', id)
     await db.tasks.delete(id)
     set(state => ({ tasks: state.tasks.filter(t => t.id !== id) }))
   },

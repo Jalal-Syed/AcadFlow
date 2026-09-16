@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Exam } from '@/types'
 import { db } from '@/db/schema'
+import { deleteCloudRecord, listCloudRecords, upsertCloudRecord } from '@/lib/cloudRecords'
 import dayjs from 'dayjs'
 
 interface ExamState {
@@ -21,12 +22,20 @@ export const useExamStore = create<ExamState>((set, get) => ({
   isLoaded: false,
 
   loadExams: async (semesterId) => {
-    const exams = await db.exams.where('semesterId').equals(semesterId).toArray()
+    let exams: Exam[]
+    try {
+      const remote = await listCloudRecords<Exam>('exams')
+      exams = remote.filter(exam => exam.semesterId === semesterId)
+      await db.exams.bulkPut(remote)
+    } catch {
+      exams = await db.exams.where('semesterId').equals(semesterId).toArray()
+    }
     set({ exams: exams.sort((a, b) => a.date.localeCompare(b.date)), isLoaded: true })
   },
 
   addExam: async (exam) => {
     const full: Exam = { ...exam, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
+    await upsertCloudRecord('exams', full)
     await db.exams.add(full)
     set(state => ({
       exams: [...state.exams, full].sort((a, b) => a.date.localeCompare(b.date)),
@@ -34,6 +43,13 @@ export const useExamStore = create<ExamState>((set, get) => ({
   },
 
   updateExam: async (id, partial) => {
+    const existing = get().exams.find(exam => exam.id === id)
+    if (!existing) throw new Error('Exam not found.')
+    await upsertCloudRecord('exams', {
+      ...existing,
+      ...partial,
+      updatedAt: new Date().toISOString(),
+    })
     await db.exams.update(id, partial)
     set(state => ({
       exams: state.exams.map(e => e.id === id ? { ...e, ...partial } : e),
@@ -41,6 +57,7 @@ export const useExamStore = create<ExamState>((set, get) => ({
   },
 
   deleteExam: async (id) => {
+    await deleteCloudRecord('exams', id)
     await db.exams.delete(id)
     set(state => ({ exams: state.exams.filter(e => e.id !== id) }))
   },

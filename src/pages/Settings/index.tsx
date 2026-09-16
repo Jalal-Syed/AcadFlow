@@ -10,6 +10,7 @@ import { useSemesterStore } from '@/stores/useSemesterStore'
 import { useUIStore } from '@/stores/useUIStore'
 import { GRADING_SCALES } from '@/constants/grading'
 import { db } from '@/db/schema'
+import { clearCloudRecords, upsertCloudRecord, type CloudTableName } from '@/lib/cloudRecords'
 import { cgpaToPercentage } from '@/lib/calculations'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -177,13 +178,23 @@ export default function SettingsPage() {
       try {
         const text = await file.text()
         const data = JSON.parse(text)
-        // Clear existing data first
+        const entries = Object.entries(data)
+        await clearCloudRecords()
+
+        for (const [name, rows] of entries) {
+          if (name === 'exportedAt' || name === 'gradingScales' || !Array.isArray(rows)) continue
+          await Promise.all(rows
+            .filter((row): row is { id: string } => typeof row === 'object' && row !== null && typeof (row as { id?: unknown }).id === 'string')
+            .map(row => upsertCloudRecord(name as CloudTableName, row)))
+        }
+
+        // Clear existing cache after the remote import succeeds.
         await db.transaction('rw', db.tables, async () => {
           for (const table of db.tables) {
             await table.clear()
           }
           // Import each table
-          for (const [name, rows] of Object.entries(data)) {
+          for (const [name, rows] of entries) {
             if (name === 'exportedAt') continue
             const table = db.table(name)
             if (table && Array.isArray(rows)) {
@@ -200,6 +211,7 @@ export default function SettingsPage() {
   }
 
   const handleClearAll = async () => {
+    await clearCloudRecords()
     await db.transaction('rw', db.tables, async () => {
       for (const table of db.tables) {
         await table.clear()

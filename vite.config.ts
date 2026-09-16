@@ -9,6 +9,13 @@ import path from 'path'
 // For web/PWA, base stays '/' so CDN-hosted deployments work normally.
 const isElectronBuild = process.env.ELECTRON === 'true'
 
+// For Capacitor (Android) and Electron builds the service worker must be
+// disabled. In a Capacitor WebView the SW registers against https://localhost,
+// enters a broken precache loop, and intercepts every asset request —
+// returning nothing. Result: blank screen on Android.
+// Electron loads via file:// where service workers are never supported anyway.
+const isNativeBuild = isElectronBuild || process.env.CAPACITOR === 'true'
+
 export default defineConfig({
   base: isElectronBuild ? './' : '/',
 
@@ -47,6 +54,17 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // On native builds (Electron + Android), the service worker must be
+      // completely disabled. On Android the Capacitor WebView registers the SW
+      // against https://localhost, Workbox enters a broken precache loop, and
+      // every asset request gets intercepted and returns nothing — blank screen.
+      // selfDestroying removes any previously cached SW on the next page load.
+      disable: isNativeBuild,
+      selfDestroying: isNativeBuild,
+      // Never register the SW during local development. It would intercept Vite's
+      // HMR websocket and hot-reload requests, causing a blank screen in the
+      // browser if a stale SW from a previous build is already cached.
+      devOptions: { enabled: false },
       includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],

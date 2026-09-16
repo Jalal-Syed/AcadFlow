@@ -1,29 +1,30 @@
 /**
  * pages/Import/index.tsx
- * Portal Sync — WebView + AI extraction flow with multi-provider support.
+ * Portal Sync — WebView + local AI extraction flow.
  *
  * How it works:
- *   1. User adds one or more AI provider keys (Gemini, Groq, OpenRouter — all free)
+ *   1. AI engine is checked on mount:
+ *        Desktop  → Ollama health-check (http://localhost:11434)
+ *        Android  → WebLLM model cache check (IndexedDB)
  *   2. User picks a portal (or enters a custom URL)
  *   3. User selects what to capture: Attendance / Marks / Subjects / Auto
  *   4. Tap "Open Portal" → portal opens in an in-app browser
  *   5. User logs in, navigates to the right page, taps the injected "📥 Capture" button
- *   6. AI extracts the data (failover across providers on rate limits) → written to Dexie
+ *   6. Local AI extracts the data → written to Dexie
  *
- * Platform notes:
- *   Electron + Android: full flow available
- *   Web/PWA: shows "use desktop or Android app" notice
+ * No cloud API keys. No external services. Fully offline after setup.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Sparkles, Globe, ChevronLeft,
+  Globe, ChevronLeft,
   CheckCircle2, XCircle,
   CalendarCheck, BookOpen, Loader2, Trash2,
-  AlertTriangle, Eye, EyeOff, WifiOff,
-  Info, BarChart2, Users,
-  ExternalLink, Plus, Key, Shield,
+  AlertTriangle, WifiOff,
+  BarChart2, Users,
+  RefreshCw, Download, HardDrive, Cpu, Zap,
+  Terminal, Sparkles,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import dayjs from 'dayjs'
@@ -32,49 +33,31 @@ import { useNavigate } from 'react-router-dom'
 
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import Modal from '@/components/ui/Modal'
 
 import { usePortalStore } from '@/stores/usePortalStore'
 import { useSemesterStore } from '@/stores/useSemesterStore'
 import { getAllPortals } from '@/lib/scraper/portals'
-import { saveProviderKey, clearProviderKey, loadProviderKey } from '@/lib/scraper/crypto'
-import { AI_PROVIDERS } from '@/lib/scraper/providers'
 import { isWebViewSupported } from '@/lib/scraper/webview'
-import type { CaptureType, AIProviderId } from '@/lib/scraper/types'
+import { isElectron, isCapacitorNative, checkOllama } from '@/lib/utils/platform'
+import {
+  isWebLLMModelCached,
+  initWebLLMEngine,
+  deleteWebLLMModelCache,
+  WEBLLM_DEFAULT_MODEL,
+} from '@/lib/scraper/webllm-engine'
+import type { CaptureType, OllamaStatus } from '@/lib/scraper/types'
 
 dayjs.extend(relativeTime)
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
+// Capture type picker options
 const CAPTURE_TYPES: { id: CaptureType; label: string; icon: React.ReactNode; desc: string }[] = [
-  {
-    id: 'auto',
-    label: 'Auto-detect',
-    icon: <Sparkles size={14} />,
-    desc: 'AI detects the page type',
-  },
-  {
-    id: 'attendance',
-    label: 'Attendance',
-    icon: <CalendarCheck size={14} />,
-    desc: 'Classes held & attended',
-  },
-  {
-    id: 'marks',
-    label: 'Marks / CIE',
-    icon: <BarChart2 size={14} />,
-    desc: 'Mid-terms, assignments, SEE',
-  },
-  {
-    id: 'subjects',
-    label: 'Subjects',
-    icon: <Users size={14} />,
-    desc: 'Course list & credits',
-  },
+  { id: 'auto',       label: 'Auto-detect', icon: <Sparkles size={14} />,      desc: 'AI detects the page type' },
+  { id: 'attendance', label: 'Attendance',  icon: <CalendarCheck size={14} />, desc: 'Classes held & attended' },
+  { id: 'marks',      label: 'Marks / CIE', icon: <BarChart2 size={14} />,     desc: 'Mid-terms, assignments, SEE' },
+  { id: 'subjects',   label: 'Subjects',    icon: <Users size={14} />,         desc: 'Course list & credits' },
 ]
 
-// ─── Platform warning ─────────────────────────────────────────────────────────
-
+// Platform warning for web/PWA
 function PlatformWarning() {
   return (
     <div className="flex items-start gap-3 bg-[rgba(255,165,2,0.06)] border border-[#FFA502]/20 rounded-2xl px-4 py-3">
@@ -82,16 +65,15 @@ function PlatformWarning() {
       <div>
         <p className="text-[#FFA502] text-xs font-semibold">Desktop or Android only</p>
         <p className="text-text/40 text-[11px] mt-0.5 leading-relaxed">
-          Portal Sync opens your college portal in an embedded browser. This feature is available in the Electron desktop app
-          and the Android APK. Web browsers cannot open external portals in an embedded view.
+          Portal Sync opens your college portal in an embedded browser.
+          Available in the Electron desktop app and the Android APK.
         </p>
       </div>
     </div>
   )
 }
 
-// ─── Sync log row ─────────────────────────────────────────────────────────────
-
+// Sync log row
 function SyncLogRow({ entry }: { entry: ReturnType<typeof usePortalStore.getState>['syncLog'][number] }) {
   return (
     <div className={clsx(
@@ -108,9 +90,9 @@ function SyncLogRow({ entry }: { entry: ReturnType<typeof usePortalStore.getStat
       <div className="flex-1 min-w-0">
         {entry.ok ? (
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-text/60">
-            {entry.subjectsSynced > 0    && <span><Users       size={9} className="inline mr-0.5" />{entry.subjectsSynced} subjects</span>}
-            {entry.attendanceSynced > 0  && <span><CalendarCheck size={9} className="inline mr-0.5" />{entry.attendanceSynced} attendance records</span>}
-            {entry.marksSynced > 0       && <span><BookOpen    size={9} className="inline mr-0.5" />{entry.marksSynced} marks</span>}
+            {entry.subjectsSynced > 0    && <span><Users size={9} className="inline mr-0.5" />{entry.subjectsSynced} subjects</span>}
+            {entry.attendanceSynced > 0  && <span><CalendarCheck size={9} className="inline mr-0.5" />{entry.attendanceSynced} records</span>}
+            {entry.marksSynced > 0       && <span><BookOpen size={9} className="inline mr-0.5" />{entry.marksSynced} marks</span>}
             {entry.subjectsSynced === 0 && entry.attendanceSynced === 0 && entry.marksSynced === 0 && (
               <span className="text-text/40">Nothing new to import</span>
             )}
@@ -129,32 +111,227 @@ function SyncLogRow({ entry }: { entry: ReturnType<typeof usePortalStore.getStat
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// Ollama status card (desktop only)
+interface OllamaCardProps {
+  status: OllamaStatus | null
+  checking: boolean
+  onRefresh: () => void
+}
+function OllamaCard({ status, checking, onRefresh }: OllamaCardProps) {
+  const isRunning = status?.available === true
+  const modelName = status && isRunning && status.models.length > 0
+    ? status.models.find(m => m.toLowerCase().startsWith('gemma')) ?? status.models[0]
+    : null
 
+  return (
+    <div className={clsx(
+      'rounded-2xl border px-4 py-4 space-y-3 transition-all',
+      isRunning
+        ? 'bg-[rgba(46,213,115,0.05)] border-[#2ED573]/25'
+        : 'bg-[rgba(255,71,87,0.05)] border-[#FF4757]/20'
+    )}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className={clsx(
+            'w-8 h-8 rounded-xl flex items-center justify-center',
+            isRunning ? 'bg-[rgba(46,213,115,0.15)]' : 'bg-[rgba(255,71,87,0.12)]'
+          )}>
+            <Cpu size={15} className={isRunning ? 'text-[#2ED573]' : 'text-[#FF4757]'} />
+          </div>
+          <div>
+            <p className={clsx('text-sm font-semibold', isRunning ? 'text-[#2ED573]' : 'text-[#FF4757]')}>
+              {checking ? 'Checking Ollama…' : isRunning ? 'Ollama running' : 'Ollama not detected'}
+            </p>
+            <p className="text-text/35 text-[11px]">
+              {isRunning && modelName ? `Using ${modelName}` : 'Local inference engine'}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onRefresh}
+          disabled={checking}
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-text/35 hover:text-text/60 hover:bg-white/[0.06] transition-all disabled:opacity-40"
+        >
+          <RefreshCw size={14} className={checking ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {/* Setup instructions when Ollama is not running */}
+      {!checking && !isRunning && (
+        <div className="space-y-2">
+          <p className="text-text/50 text-[11px] font-medium">Setup (one-time):</p>
+          <div className="space-y-1.5">
+            {[
+              { step: '1', text: 'Install Ollama', cmd: 'ollama.com/download', isLink: true },
+              { step: '2', text: 'Start Ollama',   cmd: 'ollama serve' },
+              { step: '3', text: 'Pull a model',   cmd: 'ollama pull gemma3:12b' },
+            ].map(({ step, text, cmd, isLink }) => (
+              <div key={step} className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-white/[0.07] text-text/30 text-[10px] flex items-center justify-center font-bold shrink-0">
+                  {step}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-text/40 text-[11px]">{text} </span>
+                  {isLink ? (
+                    <a
+                      href={`https://${cmd}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#6C63FF] text-[11px] hover:underline"
+                    >
+                      {cmd}
+                    </a>
+                  ) : (
+                    <code className="text-[#6C63FF] text-[11px] bg-[#6C63FF]/10 px-1.5 py-0.5 rounded-md font-mono">
+                      {cmd}
+                    </code>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-text/25 text-[10px]">
+            After Ollama is running, tap the refresh button above. Any Gemma model works — gemma3:4b is faster, gemma3:12b is more accurate.
+          </p>
+        </div>
+      )}
+
+      {/* Model list when running */}
+      {isRunning && status && status.models.length > 1 && (
+        <div className="flex flex-wrap gap-1.5">
+          {status.models.map(m => (
+            <span key={m} className={clsx(
+              'text-[10px] px-2 py-0.5 rounded-full border font-mono',
+              m === modelName
+                ? 'bg-[#2ED573]/15 border-[#2ED573]/30 text-[#2ED573]'
+                : 'bg-white/[0.04] border-border/[0.08] text-text/30'
+            )}>
+              {m === modelName && <Zap size={8} className="inline mr-0.5" />}
+              {m}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// WebLLM model card (Android only)
+interface WebLLMCardProps {
+  isCached: boolean
+  isDownloading: boolean
+  downloadProgress: number
+  downloadError: string | null
+  onDownload: () => void
+  onDelete: () => void
+}
+function WebLLMCard({ isCached, isDownloading, downloadProgress, downloadError, onDownload, onDelete }: WebLLMCardProps) {
+  return (
+    <div className={clsx(
+      'rounded-2xl border px-4 py-4 space-y-3 transition-all',
+      isCached
+        ? 'bg-[rgba(46,213,115,0.05)] border-[#2ED573]/25'
+        : isDownloading
+          ? 'bg-[rgba(108,99,255,0.06)] border-[#6C63FF]/25'
+          : 'bg-white/[0.02] border-border/[0.06]'
+    )}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className={clsx(
+            'w-8 h-8 rounded-xl flex items-center justify-center',
+            isCached ? 'bg-[rgba(46,213,115,0.15)]' : 'bg-white/[0.06]'
+          )}>
+            <HardDrive size={15} className={isCached ? 'text-[#2ED573]' : 'text-text/40'} />
+          </div>
+          <div>
+            <p className={clsx('text-sm font-semibold', isCached ? 'text-[#2ED573]' : 'text-text/70')}>
+              {isCached ? 'Model ready' : isDownloading ? 'Downloading…' : 'On-device model'}
+            </p>
+            <p className="text-text/35 text-[11px] font-mono">{WEBLLM_DEFAULT_MODEL}</p>
+          </div>
+        </div>
+        {isCached && !isDownloading && (
+          <button
+            onClick={onDelete}
+            className="text-text/25 hover:text-[#FF4757] text-[10px] flex items-center gap-1 transition-colors"
+          >
+            <Trash2 size={11} />
+            Delete
+          </button>
+        )}
+      </div>
+
+      {/* Download progress bar */}
+      {isDownloading && (
+        <div className="space-y-1.5">
+          <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-[#6C63FF] rounded-full"
+              animate={{ width: `${Math.round(downloadProgress * 100)}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+          <p className="text-text/35 text-[11px] text-right">{Math.round(downloadProgress * 100)}%</p>
+        </div>
+      )}
+
+      {/* Download prompt */}
+      {!isCached && !isDownloading && (
+        <div className="space-y-2.5">
+          <div className="flex items-start gap-2 text-[11px] text-text/40 leading-relaxed">
+            <Download size={11} className="mt-0.5 shrink-0 text-text/25" />
+            <p>
+              <span className="text-text/60 font-medium">~1.5 GB</span> download, cached in IndexedDB.
+              Works offline after download. Uses WebGPU on supported devices, WASM otherwise.
+            </p>
+          </div>
+          <Button fullWidth size="sm" onClick={onDownload}>
+            <Download size={13} className="mr-1.5" />
+            Download On-Device Model
+          </Button>
+        </div>
+      )}
+
+      {/* Error */}
+      {downloadError && (
+        <div className="flex items-start gap-2 bg-[rgba(255,71,87,0.07)] border border-[#FF4757]/20 rounded-xl px-3 py-2">
+          <AlertTriangle size={12} className="text-[#FF4757] mt-0.5 shrink-0" />
+          <p className="text-[#FF4757]/75 text-[11px] leading-relaxed">{downloadError}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Main component
 export default function ImportPage() {
   const navigate = useNavigate()
 
   const {
-    lastPortalUrl, configuredProviders, syncLog, syncStatus, lastError,
+    lastPortalUrl, syncLog, syncStatus, lastError,
     captureType,
-    addProvider, removeProvider, setLastPortalUrl, setCaptureType,
+    setLastPortalUrl, setCaptureType,
     setSyncStatus, clearLog, runCapture,
   } = usePortalStore()
 
   const activeSemesterId = useSemesterStore(s => s.activeSemesterId)
-
   const portals = getAllPortals()
+
   const [supported, setSupported] = useState(false)
+  const [onDesktop, setOnDesktop] = useState(false)
+  const [onAndroid, setOnAndroid] = useState(false)
 
-  // ── API key modal state ────────────────────────────────────────────────────
-  const [showKeyModal, setShowKeyModal] = useState(false)
-  const [activeProviderId, setActiveProviderId] = useState<AIProviderId | null>(null)
-  const [keyInput, setKeyInput] = useState('')
-  const [showKey, setShowKey] = useState(false)
-  const [keyError, setKeyError] = useState<string | null>(null)
-  const [savingKey, setSavingKey] = useState(false)
+  // Ollama state (desktop)
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null)
+  const [ollamaChecking, setOllamaChecking] = useState(false)
 
-  // ── Portal URL state ───────────────────────────────────────────────────────
+  // WebLLM state (Android)
+  const [webllmCached, setWebllmCached] = useState(false)
+  const [webllmDownloading, setWebllmDownloading] = useState(false)
+  const [webllmProgress, setWebllmProgress] = useState(0)
+  const [webllmError, setWebllmError] = useState<string | null>(null)
+
+  // Portal URL state
   const [selectedPortalId, setSelectedPortalId] = useState<string>(
     portals.find(p => p.baseUrl === lastPortalUrl)?.id ?? portals[0]?.id ?? 'custom'
   )
@@ -167,66 +344,72 @@ export default function ImportPage() {
     ? customUrl.trim()
     : (selectedPortal?.baseUrl ?? '')
 
-  // ── Check platform support on mount ───────────────────────────────────────
+  // Platform + engine detection on mount
   useEffect(() => {
-    isWebViewSupported().then(setSupported)
-  }, [])
+    ;(async () => {
+      const [sup, cap] = await Promise.all([
+        isWebViewSupported(),
+        isCapacitorNative(),
+      ])
+      const electron = isElectron()
+      setSupported(sup)
+      setOnDesktop(electron)
+      setOnAndroid(cap && !electron)
 
-  // ── Verify stored keys on mount ────────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      for (const pid of configuredProviders) {
-        const key = await loadProviderKey(pid)
-        if (!key) {
-          removeProvider(pid)
-        }
+      if (electron) {
+        refreshOllama()
+      } else if (cap) {
+        const cached = await isWebLLMModelCached(WEBLLM_DEFAULT_MODEL)
+        setWebllmCached(cached)
       }
     })()
   }, [])
 
-  const isBusy = ['opening', 'waiting', 'extracting', 'saving'].includes(syncStatus)
-  const hasAnyKey = configuredProviders.length > 0
-
-  // ── Handle adding a provider key ───────────────────────────────────────────
-  const openKeyModal = (providerId: AIProviderId) => {
-    setActiveProviderId(providerId)
-    setKeyInput('')
-    setKeyError(null)
-    setShowKey(false)
-    setShowKeyModal(true)
-  }
-
-  const handleSaveKey = async () => {
-    if (!activeProviderId) return
-    const provider = AI_PROVIDERS.find(p => p.id === activeProviderId)
-    if (!provider) return
-
-    const trimmed = keyInput.trim()
-    if (!trimmed) { setKeyError('Enter your API key.'); return }
-
-    const validationError = provider.validateKey(trimmed)
-    if (validationError) { setKeyError(validationError); return }
-
-    setSavingKey(true)
-    setKeyError(null)
+  const refreshOllama = useCallback(async () => {
+    setOllamaChecking(true)
     try {
-      await saveProviderKey(activeProviderId, trimmed)
-      addProvider(activeProviderId)
-      setShowKeyModal(false)
-      setKeyInput('')
-    } catch (err: any) {
-      setKeyError(err?.message ?? 'Failed to save key.')
+      const status = await checkOllama()
+      setOllamaStatus(status)
     } finally {
-      setSavingKey(false)
+      setOllamaChecking(false)
+    }
+  }, [])
+
+  const handleDownloadWebLLM = async () => {
+    setWebllmDownloading(true)
+    setWebllmError(null)
+    setWebllmProgress(0)
+    try {
+      await initWebLLMEngine(WEBLLM_DEFAULT_MODEL, ({ progress }) => {
+        setWebllmProgress(progress)
+      })
+      setWebllmCached(true)
+    } catch (err: any) {
+      setWebllmError(err?.message ?? 'Download failed. Please try again.')
+    } finally {
+      setWebllmDownloading(false)
     }
   }
 
-  const handleRemoveKey = async (providerId: AIProviderId) => {
-    await clearProviderKey(providerId)
-    removeProvider(providerId)
+  const handleDeleteWebLLM = async () => {
+    try {
+      await deleteWebLLMModelCache(WEBLLM_DEFAULT_MODEL)
+      setWebllmCached(false)
+      setWebllmProgress(0)
+    } catch (err: any) {
+      setWebllmError(err?.message ?? 'Failed to delete model cache.')
+    }
   }
 
-  // ── Handle capture ─────────────────────────────────────────────────────────
+  const isBusy = ['opening', 'waiting', 'extracting', 'saving'].includes(syncStatus)
+
+  // Is the AI engine ready to run inference?
+  const engineReady = onDesktop
+    ? (ollamaStatus?.available === true && (ollamaStatus?.models?.length ?? 0) > 0)
+    : onAndroid
+      ? webllmCached
+      : false
+
   const handleCapture = async () => {
     if (!activeSemesterId) {
       setSyncStatus('error', 'No active semester. Create one in Semesters first.')
@@ -236,15 +419,10 @@ export default function ImportPage() {
       setSyncStatus('error', 'Select or enter a portal URL.')
       return
     }
-    if (!hasAnyKey) {
-      setSyncStatus('error', 'Add at least one AI provider key before capturing.')
-      return
-    }
     setLastPortalUrl(portalUrl)
     await runCapture(portalUrl, captureType, activeSemesterId)
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 overflow-y-auto pb-32 px-4 pt-6 space-y-5">
 
@@ -258,110 +436,59 @@ export default function ImportPage() {
         </button>
         <div>
           <h1 className="text-text text-xl font-bold leading-tight">Portal Sync</h1>
-          <p className="text-text/35 text-[11px]">Log in to your portal, tap Capture — AI does the rest</p>
+          <p className="text-text/35 text-[11px]">
+            Log in to your portal, tap Capture — local AI does the rest
+          </p>
         </div>
       </div>
 
       {/* Platform warning */}
       {!supported && <PlatformWarning />}
 
-      {/* ── HOW IT WORKS blurb ──────────────────────────────────────────── */}
+      {/* How it works blurb */}
       <div className="flex items-start gap-3 bg-[rgba(0,245,212,0.04)] border border-[#00F5D4]/15 rounded-2xl px-4 py-3">
-        <Info size={14} className="text-[#00F5D4] mt-0.5 shrink-0" />
-        <div className="text-[11px] text-text/50 leading-relaxed space-y-1">
-          <p>
-            <span className="text-text/75 font-semibold">No passwords stored.</span>{' '}
-            Your portal opens in a browser window — you log in yourself.
-            After logging in, navigate to your attendance or marks page and tap the{' '}
-            <span className="text-[#6C63FF] font-semibold">📥 Capture</span> button that appears.
-          </p>
-          <p>
-            <span className="text-text/75 font-semibold">Multi-provider AI</span>{' '}
-            — add keys from Gemini, Groq, and/or OpenRouter (all free). If one hits rate limits, the next provider takes over automatically.
-          </p>
-        </div>
+        <Terminal size={14} className="text-[#00F5D4] mt-0.5 shrink-0" />
+        <p className="text-[11px] text-text/50 leading-relaxed">
+          <span className="text-text/75 font-semibold">No passwords stored. No cloud.</span>{' '}
+          Your portal opens in a browser window — you log in yourself.
+          Navigate to your attendance or marks page and tap the{' '}
+          <span className="text-[#6C63FF] font-semibold">📥 Capture</span> button.
+          Data is extracted entirely on your device.
+        </p>
       </div>
 
-      {/* ── AI PROVIDER KEYS ─────────────────────────────────────────────── */}
+      {/* AI Engine section */}
       <section className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <p className="text-text/30 text-[10px] uppercase tracking-wider">AI Providers</p>
-          <div className="flex items-center gap-1.5">
-            <Shield size={10} className="text-text/20" />
-            <span className="text-text/20 text-[10px]">Keys encrypted on-device</span>
+        <p className="text-text/30 text-[10px] uppercase tracking-wider pl-1">AI Engine</p>
+
+        {onDesktop && (
+          <OllamaCard
+            status={ollamaStatus}
+            checking={ollamaChecking}
+            onRefresh={refreshOllama}
+          />
+        )}
+
+        {onAndroid && (
+          <WebLLMCard
+            isCached={webllmCached}
+            isDownloading={webllmDownloading}
+            downloadProgress={webllmProgress}
+            downloadError={webllmError}
+            onDownload={handleDownloadWebLLM}
+            onDelete={handleDeleteWebLLM}
+          />
+        )}
+
+        {!onDesktop && !onAndroid && supported && (
+          <div className="flex items-center gap-3 bg-white/[0.02] border border-border/[0.06] rounded-2xl px-4 py-3">
+            <Loader2 size={14} className="text-text/30 animate-spin shrink-0" />
+            <p className="text-text/40 text-[11px]">Detecting platform…</p>
           </div>
-        </div>
-
-        <div className="space-y-2">
-          {AI_PROVIDERS.map(provider => {
-            const isConfigured = configuredProviders.includes(provider.id)
-            return (
-              <div
-                key={provider.id}
-                className={clsx(
-                  'flex items-center justify-between px-4 py-3 rounded-2xl border transition-all',
-                  isConfigured
-                    ? 'bg-[rgba(46,213,115,0.06)] border-[#2ED573]/25'
-                    : 'bg-white/[0.02] border-border/[0.06]'
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={clsx(
-                    'w-8 h-8 rounded-xl flex items-center justify-center',
-                    isConfigured ? 'bg-[rgba(46,213,115,0.15)]' : 'bg-white/[0.05]'
-                  )}>
-                    <Key size={14} className={isConfigured ? 'text-[#2ED573]' : 'text-text/40'} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className={clsx('text-sm font-semibold', isConfigured ? 'text-[#2ED573]' : 'text-text/70')}>
-                        {provider.name}
-                      </p>
-                      {isConfigured && (
-                        <span className="text-[9px] bg-[#2ED573]/15 text-[#2ED573] px-1.5 py-0.5 rounded-full font-medium">
-                          Ready
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-text/30 text-[11px]">{provider.description}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  {isConfigured ? (
-                    <>
-                      <button
-                        onClick={() => openKeyModal(provider.id)}
-                        className="text-text/35 hover:text-text/60 text-[11px] transition-colors px-2 py-1"
-                      >
-                        Change
-                      </button>
-                      <button
-                        onClick={() => handleRemoveKey(provider.id)}
-                        className="text-[#FF4757]/60 hover:text-[#FF4757] text-[11px] transition-colors px-2 py-1"
-                      >
-                        Remove
-                      </button>
-                    </>
-                  ) : (
-                    <Button size="sm" onClick={() => openKeyModal(provider.id)}>
-                      <Plus size={12} className="mr-1" />
-                      Add Key
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {!hasAnyKey && (
-          <p className="text-text/25 text-[11px] pl-1">
-            Add at least one provider key to start capturing. All are free — no credit card needed.
-          </p>
         )}
       </section>
 
-      {/* ── PORTAL PICKER ───────────────────────────────────────────────── */}
+      {/* Portal picker */}
       <section className="space-y-2">
         <p className="text-text/30 text-[10px] uppercase tracking-wider pl-1">Portal</p>
         <div className="space-y-2">
@@ -399,7 +526,6 @@ export default function ImportPage() {
           ))}
         </div>
 
-        {/* Custom URL input */}
         <AnimatePresence>
           {selectedPortalId === 'custom' && (
             <motion.div
@@ -420,7 +546,7 @@ export default function ImportPage() {
         </AnimatePresence>
       </section>
 
-      {/* ── CAPTURE TYPE ────────────────────────────────────────────────── */}
+      {/* Capture type */}
       <section className="space-y-2">
         <p className="text-text/30 text-[10px] uppercase tracking-wider pl-1">What to Capture</p>
         <div className="grid grid-cols-2 gap-2">
@@ -435,10 +561,7 @@ export default function ImportPage() {
                   : 'bg-white/[0.02] border-border/[0.06] hover:bg-white/[0.04]'
               )}
             >
-              <div className={clsx(
-                'mt-0.5 shrink-0',
-                captureType === ct.id ? 'text-[#6C63FF]' : 'text-text/35'
-              )}>
+              <div className={clsx('mt-0.5 shrink-0', captureType === ct.id ? 'text-[#6C63FF]' : 'text-text/35')}>
                 {ct.icon}
               </div>
               <div>
@@ -452,7 +575,7 @@ export default function ImportPage() {
         </div>
       </section>
 
-      {/* ── STATUS / ERROR ───────────────────────────────────────────────── */}
+      {/* Status / error */}
       <AnimatePresence>
         {syncStatus !== 'idle' && (
           <motion.div
@@ -464,7 +587,7 @@ export default function ImportPage() {
             {lastError && syncStatus === 'error' ? (
               <div className="flex items-start gap-2.5 bg-[rgba(255,71,87,0.07)] border border-[#FF4757]/20 rounded-2xl px-4 py-3">
                 <AlertTriangle size={14} className="text-[#FF4757] mt-0.5 shrink-0" />
-                <p className="text-[#FF4757]/80 text-xs leading-relaxed">{lastError}</p>
+                <p className="text-[#FF4757]/80 text-xs leading-relaxed whitespace-pre-line">{lastError}</p>
               </div>
             ) : isBusy ? (
               <div className="flex items-center gap-3 bg-[rgba(108,99,255,0.06)] border border-[#6C63FF]/20 rounded-2xl px-4 py-3">
@@ -473,12 +596,17 @@ export default function ImportPage() {
                   <p className="text-[#6C63FF] text-xs font-semibold">
                     {syncStatus === 'opening'    && 'Opening portal browser…'}
                     {syncStatus === 'waiting'    && 'Waiting for you to tap 📥 Capture…'}
-                    {syncStatus === 'extracting' && 'AI is extracting data…'}
+                    {syncStatus === 'extracting' && 'Local AI is extracting data…'}
                     {syncStatus === 'saving'     && 'Saving to your semester…'}
                   </p>
                   {syncStatus === 'waiting' && (
                     <p className="text-text/35 text-[11px] mt-0.5">
                       Log in, navigate to attendance or marks, then tap the purple Capture button on screen.
+                    </p>
+                  )}
+                  {syncStatus === 'extracting' && (
+                    <p className="text-text/35 text-[11px] mt-0.5">
+                      {onDesktop ? 'Running on Ollama — no internet needed.' : 'Running on-device — no internet needed.'}
                     </p>
                   )}
                 </div>
@@ -493,18 +621,29 @@ export default function ImportPage() {
         )}
       </AnimatePresence>
 
-      {/* ── OPEN PORTAL BUTTON ───────────────────────────────────────────── */}
+      {/* Open Portal button */}
       <Button
         fullWidth
         onClick={handleCapture}
         loading={isBusy}
-        disabled={!supported || !portalUrl || isBusy || !hasAnyKey}
+        disabled={!supported || !portalUrl || isBusy || !engineReady}
       >
         <Globe size={14} className="mr-1.5" />
         Open Portal &amp; Capture
       </Button>
 
-      {/* ── SYNC LOG ────────────────────────────────────────────────────── */}
+      {/* Engine not ready hint below button */}
+      {supported && !engineReady && !isBusy && (
+        <p className="text-text/30 text-[11px] text-center">
+          {onDesktop
+            ? 'Start Ollama and pull a model to enable capture'
+            : onAndroid
+              ? 'Download the on-device model above to enable capture'
+              : 'Engine not detected'}
+        </p>
+      )}
+
+      {/* Sync log */}
       {syncLog.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
@@ -523,80 +662,6 @@ export default function ImportPage() {
           </div>
         </section>
       )}
-
-      {/* ── API KEY MODAL ────────────────────────────────────────────────── */}
-      <Modal
-        open={showKeyModal}
-        onClose={() => { setShowKeyModal(false); setKeyInput(''); setKeyError(null) }}
-        title={activeProviderId ? `${AI_PROVIDERS.find(p => p.id === activeProviderId)?.name ?? ''} API Key` : 'API Key'}
-        size="md"
-      >
-        {activeProviderId && (() => {
-          const provider = AI_PROVIDERS.find(p => p.id === activeProviderId)!
-          return (
-            <div className="space-y-4">
-              <div className="bg-white/[0.03] border border-border/[0.06] rounded-xl px-3 py-2.5 space-y-1.5">
-                <p className="text-text/55 text-[11px] leading-relaxed">
-                  <strong className="text-text/75">{provider.name}</strong> — {provider.description}. No credit card needed.
-                </p>
-                <a
-                  href={provider.keyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-[#6C63FF] text-[11px] hover:underline"
-                >
-                  <ExternalLink size={11} />
-                  Get your free key →
-                </a>
-              </div>
-
-              <div className="relative">
-                <Input
-                  label="API Key"
-                  type={showKey ? 'text' : 'password'}
-                  placeholder={provider.keyPlaceholder}
-                  value={keyInput}
-                  onChange={e => setKeyInput(e.target.value)}
-                  hint="Encrypted and stored on this device only."
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(v => !v)}
-                  className="absolute right-3 top-9 text-text/35 hover:text-text/60 transition-colors"
-                >
-                  {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-
-              {keyError && (
-                <div className="flex items-start gap-2 bg-[rgba(255,71,87,0.08)] border border-[#FF4757]/25 rounded-xl px-3 py-2">
-                  <XCircle size={13} className="text-[#FF4757] mt-0.5 shrink-0" />
-                  <p className="text-[#FF4757]/80 text-xs">{keyError}</p>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-1">
-                <Button
-                  fullWidth variant="secondary"
-                  onClick={() => { setShowKeyModal(false); setKeyInput(''); setKeyError(null) }}
-                  disabled={savingKey}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  fullWidth
-                  onClick={handleSaveKey}
-                  loading={savingKey}
-                  disabled={savingKey || !keyInput.trim()}
-                >
-                  <Sparkles size={14} className="mr-1.5" />
-                  Save Key
-                </Button>
-              </div>
-            </div>
-          )
-        })()}
-      </Modal>
 
     </div>
   )

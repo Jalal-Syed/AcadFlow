@@ -15,7 +15,7 @@
  * guard ensures this code path is never reached.
  */
 
-// ─── Platform helpers ─────────────────────────────────────────────────────────
+// Platform helpers
 
 import { isElectron } from '@/lib/utils/platform'
 
@@ -28,7 +28,7 @@ async function isCapacitorNative(): Promise<boolean> {
   }
 }
 
-// ─── WebCrypto helpers (used on Android) ─────────────────────────────────────
+// WebCrypto helpers (used on Android)
 
 const AES_KEY_PREFS_KEY = 'acadflow-scraper-aes-key'
 
@@ -87,7 +87,7 @@ async function webcryptoDecrypt(encrypted: string): Promise<string> {
   return new TextDecoder().decode(plain)
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+// Public API
 
 export async function encryptCredential(plaintext: string): Promise<string> {
   if (isElectron()) {
@@ -185,7 +185,7 @@ export async function clearCredentials(
   }
 }
 
-// ─── AI Provider key helpers ──────────────────────────────────────────────────
+// AI Provider key helpers
 // Reuses the same encrypted storage infrastructure above.
 // Each provider's API key is stored under '__provider_{id}__' adapter ID.
 
@@ -197,27 +197,18 @@ function providerAdapterId(providerId: AIProviderId): string {
 
 const PROVIDER_KEY_FIELD = 'apiKey'
 
-/** Save an AI provider's API key, encrypted, to platform secure storage. */
+/** Save an AI provider's API key (or model name for Ollama), encrypted, to platform secure storage. */
 export async function saveProviderKey(providerId: AIProviderId, key: string): Promise<void> {
   await saveCredentials(providerAdapterId(providerId), { [PROVIDER_KEY_FIELD]: key })
 }
 
-/** Load a saved AI provider's API key. Returns null if not set. */
+/** Load a saved AI provider's API key / model name. Returns null if not set. */
 export async function loadProviderKey(providerId: AIProviderId): Promise<string | null> {
   const creds = await loadCredentials(providerAdapterId(providerId), [PROVIDER_KEY_FIELD])
   return creds?.[PROVIDER_KEY_FIELD] ?? null
 }
 
-/** Remove a stored AI provider's API key. */
+/** Remove a stored AI provider's API key / model name. */
 export async function clearProviderKey(providerId: AIProviderId): Promise<void> {
   await clearCredentials(providerAdapterId(providerId), [PROVIDER_KEY_FIELD])
 }
-
-// ─── Backward-compatible aliases (Gemini) ─────────────────────────────────────
-
-/** @deprecated — use saveProviderKey('gemini', key) instead */
-export const saveApiKey = (key: string) => saveProviderKey('gemini', key)
-/** @deprecated — use loadProviderKey('gemini') instead */
-export const loadApiKey = () => loadProviderKey('gemini')
-/** @deprecated — use clearProviderKey('gemini') instead */
-export const clearApiKey = () => clearProviderKey('gemini')

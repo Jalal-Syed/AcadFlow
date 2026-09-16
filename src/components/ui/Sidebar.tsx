@@ -30,8 +30,7 @@ export default function Sidebar() {
   const { pathname } = useLocation()
   const { profile } = useProfileStore()
   const { theme, setTheme } = useUIStore()
-  const { configuredProviders, syncStatus } = usePortalStore()
-  const portalConnected = configuredProviders.length > 0
+  const { syncStatus } = usePortalStore()
   const isDark = theme === 'dark'
 
   return (
@@ -85,7 +84,7 @@ export default function Sidebar() {
                 <span className="text-sm font-medium">{label}</span>
               )}
               {/* Portal Sync live status dot */}
-              {to === '/import' && portalConnected && !collapsed && (
+              {to === '/import' && !collapsed && syncStatus !== 'idle' && (
                 <span
                   className={clsx(
                     'ml-auto w-2 h-2 rounded-full shrink-0',

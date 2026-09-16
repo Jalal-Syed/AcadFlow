@@ -53,7 +53,6 @@ portal_dev_credentials_for_tkrec.in.md
 
 
 .env
-.env.example
 
 _fix_session_append.md
 fixes-to-be-made.md

@@ -27,11 +27,10 @@ import {
   Cloud, LogIn, LogOut, UserCircle2, RefreshCw, CheckCircle2, AlertCircle,
 } from 'lucide-react'
 import { useSyncStore } from '@/stores/useSyncStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 dayjs.extend(relativeTime)
-import { usePortalStore } from '@/stores/usePortalStore'
-import { useAuthStore } from '@/stores/useAuthStore'
 
 const UNIVERSITY_OPTIONS = [
   { value: 'JNTUH',    label: 'JNTUH (R-25)' },
@@ -98,8 +97,6 @@ function SettingRow({ icon: Icon, iconBg, label, value, onClick }: SettingRowPro
 export default function SettingsPage() {
   const navigate = useNavigate()
   const { profile, updateProfile, gradingScale, setGradingScale, clearProfile } = useProfileStore()
-  const { configuredProviders } = usePortalStore()
-  const portalConnected = configuredProviders.length > 0
   const { semesters, activeSemesterId } = useSemesterStore()
   const { theme, setTheme } = useUIStore()
   const { user, status: authStatus, signOut } = useAuthStore()
@@ -426,7 +423,7 @@ export default function SettingsPage() {
           icon={Link2}
           iconBg="#6C63FF"
           label="Portal Sync"
-          value={portalConnected ? `Connected · ${configuredProviders.length} provider${configuredProviders.length > 1 ? 's' : ''}` : 'Auto-import attendance & marks'}
+          value="Auto-import attendance &amp; marks (local AI)"
           onClick={() => navigate('/import')}
         />
         <SettingRow icon={Download} iconBg="#2ED573" label="Export All Data" value="Download JSON backup" onClick={handleExport} />

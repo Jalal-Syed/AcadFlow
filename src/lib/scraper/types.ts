@@ -97,7 +97,22 @@ export interface SyncResult {
 
 // ─── AI Provider types ────────────────────────────────────────────────────────
 
-export type AIProviderId = 'gemini' | 'groq' | 'openrouter'
+export type AIProviderId = 'ollama' | 'webllm'
+
+// Status returned by the Ollama health-check
+export interface OllamaStatus {
+  available: boolean
+  models: string[]
+}
+
+// Status returned by the WebLLM engine
+export interface WebLLMStatus {
+  ready: boolean
+  modelId: string | null
+  /** 0–1 download progress when a model is being fetched */
+  downloadProgress: number
+  error?: string
+}
 
 export interface AIProviderConfig {
   id: AIProviderId
@@ -126,16 +141,3 @@ export class ExtractionError extends Error {
 }
 
 /** Thrown when a provider returns 429 — signals the failover engine to try the next provider */
-export class ProviderRateLimitError extends Error {
-  constructor(public providerId: AIProviderId, message?: string) {
-    super(message ?? `${providerId} rate limit reached`)
-    this.name = 'ProviderRateLimitError'
-  }
-}
-
-export class ApiKeyMissingError extends Error {
-  constructor() {
-    super('No AI provider keys configured. Add at least one key in Portal Sync settings.')
-    this.name = 'ApiKeyMissingError'
-  }
-}

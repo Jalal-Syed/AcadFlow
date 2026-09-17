@@ -14,6 +14,7 @@ const Router = isElectron ? HashRouter : BrowserRouter
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { SplashScreen } from '@capacitor/splash-screen'
+import { Browser } from '@capacitor/browser'
 
 import { createNotificationChannels } from './lib/notifications'
 import { useAuthStore } from './stores/useAuthStore'
@@ -30,6 +31,7 @@ async function initCapacitor() {
   const { App: CapApp } = await import('@capacitor/app')
   CapApp.addListener('appUrlOpen', ({ url }) => {
     if (url.startsWith('acadflow://auth/callback')) {
+      void Browser.close().catch(() => {})
       // Keep the callback inside the native WebView. The custom URL may carry
       // either a PKCE query or an implicit-flow hash.
       const callback = url.split('acadflow://auth/callback').pop() ?? ''

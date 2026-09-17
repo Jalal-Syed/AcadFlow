@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { User, Session } from '@supabase/supabase-js'
 import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
 import { supabase } from '@/lib/supabase'
 
 // ---------------------------------------------------------------------------
@@ -82,10 +83,16 @@ export const useAuthStore = create<AuthState>((set) => ({
           .authBridge.openExternal(data.url)
       }
     } else if (Capacitor.isNativePlatform()) {
-      await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: 'acadflow://auth/callback' },
+        options: {
+          redirectTo: 'acadflow://auth/callback',
+          skipBrowserRedirect: true,
+        },
       })
+      if (error) throw error
+      if (!data.url) throw new Error('Google sign-in URL was not returned.')
+      await Browser.open({ url: data.url })
     } else {
       await supabase.auth.signInWithOAuth({
         provider: 'google',

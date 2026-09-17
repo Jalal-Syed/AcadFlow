@@ -70,9 +70,10 @@ jobs:
           VERSION_BASE="${VERSION_NAME%%-*}"
           IFS=. read -r MAJOR MINOR PATCH <<< "$VERSION_BASE"
           VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          export VERSION_NAME
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          pnpm version "$VERSION_NAME" --no-git-tag-version
+          node -e "const fs=require('fs'); const file='package.json'; const pkg=JSON.parse(fs.readFileSync(file, 'utf8')); pkg.version=process.env.VERSION_NAME; fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\\n')"
 
       - name: Set up JDK 17
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
@@ -194,11 +195,12 @@ jobs:
         run: |
           VERSION="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
           VERSION_NAME="${VERSION#v}"
+          export VERSION_NAME
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
-          pnpm version "$VERSION_NAME" --no-git-tag-version
+          node -e "const fs=require('fs'); const file='package.json'; const pkg=JSON.parse(fs.readFileSync(file, 'utf8')); pkg.version=process.env.VERSION_NAME; fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\\n')"
 
       - name: Build Electron app — ${{ matrix.name }}
-        run: pnpm exec electron-builder ${{ matrix.build_flag }} --publish never --config.extraMetadata.version="$VERSION_NAME"
+        run: pnpm exec electron-builder ${{ matrix.build_flag }} --publish never
         # Publishing is handled by Job 3 (softprops/action-gh-release).
         # Passing --publish onTagOrDraft here caused a 404 because no release
         # draft exists yet when this job runs — Job 3 creates it afterward.

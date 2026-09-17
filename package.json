@@ -154,7 +154,7 @@
     },
     "dmg": {
       "title": "Install AcadFlow",
-      "background": null
+      "background": "electron/assets/dmg-background.png"
     }
   }
 }

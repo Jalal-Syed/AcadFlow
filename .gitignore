@@ -33,6 +33,7 @@ electron/assets/*.ico
 electron/assets/*.icns
 electron/assets/*.png
 !electron/assets/icon.png
+!electron/assets/dmg-background.png
 
 # Editor
 .vscode/

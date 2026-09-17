@@ -101,6 +101,9 @@ jobs:
       - name: Sync Capacitor (copies dist/ into Android project)
         run: npx cap sync android
 
+      - name: Configure Android OAuth callback
+        run: pnpm cap:configure-auth
+
       - name: Make Gradlew executable
         run: chmod +x android/gradlew
 

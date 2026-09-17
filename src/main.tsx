@@ -29,7 +29,7 @@ async function initCapacitor() {
 
   // Android: deep-link listener for OAuth callback (acadflow://auth/callback)
   const { App: CapApp } = await import('@capacitor/app')
-  CapApp.addListener('appUrlOpen', ({ url }) => {
+  const handleAuthCallback = (url: string) => {
     if (url.startsWith('acadflow://auth/callback')) {
       void Browser.close().catch(() => {})
       // Keep the callback inside the native WebView. The custom URL may carry
@@ -38,7 +38,10 @@ async function initCapacitor() {
       window.history.replaceState({}, '', `/auth/callback${callback}`)
       window.dispatchEvent(new PopStateEvent('popstate'))
     }
-  })
+  }
+  CapApp.addListener('appUrlOpen', ({ url }) => handleAuthCallback(url))
+  const launchUrl = await CapApp.getLaunchUrl()
+  if (launchUrl?.url) handleAuthCallback(launchUrl.url)
   CapApp.addListener('appStateChange', (_state) => {
     // Future: trigger background sync or refresh when app resumes
   })

@@ -68,10 +68,13 @@ VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
-In Supabase, add both `https://your-web-domain.example/auth/callback` and
-`acadflow://auth/callback` under Authentication → URL Configuration → Redirect URLs.
-Enable the Email provider to allow password sign-up/sign-in. Google OAuth and
-magic-link sign-in use the same redirect URLs.
+In Supabase, add both `https://your-web-domain.example/auth/callback` and the
+exact native callback `acadflow://auth/callback` under Authentication → URL
+Configuration → Redirect URLs. Do not rely only on a wildcard entry.
+Enable the Email provider to allow password sign-up/sign-in. In the Google
+provider settings, the OAuth client redirect URI must be Supabase's callback:
+`https://<project-ref>.supabase.co/auth/v1/callback`. Google OAuth then returns
+through Supabase to the app callback above.
 
 The app works fully offline without these. They are only needed for the optional cross-device sync feature.
 

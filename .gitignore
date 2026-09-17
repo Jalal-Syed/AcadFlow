@@ -22,6 +22,8 @@ android/.cxx/
 *.apk
 *.aab
 plugins/portal-capture/dist/
+!plugins/portal-capture/dist/
+!plugins/portal-capture/dist/*
 
 # Electron build output
 release-builds/

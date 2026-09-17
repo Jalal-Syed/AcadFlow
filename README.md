@@ -68,6 +68,11 @@ VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
+In Supabase, add both `https://your-web-domain.example/auth/callback` and
+`acadflow://auth/callback` under Authentication → URL Configuration → Redirect URLs.
+Enable the Email provider to allow password sign-up/sign-in. Google OAuth and
+magic-link sign-in use the same redirect URLs.
+
 The app works fully offline without these. They are only needed for the optional cross-device sync feature.
 
 ---

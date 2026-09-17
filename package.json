@@ -5,6 +5,7 @@
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
+    "prebuild": "pnpm --dir plugins/portal-capture build",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -30,6 +31,7 @@
     "@capacitor/preferences": "^6.0.4",
     "@capacitor/splash-screen": "^6.0.4",
     "@capacitor/status-bar": "^6.0.3",
+    "@acadflow/portal-capture": "file:plugins/portal-capture",
     "@hookform/resolvers": "^3.10.0",
     "@mlc-ai/web-llm": "^0.2.83",
     "@supabase/supabase-js": "^2.105.3",
@@ -104,6 +106,7 @@
       "electron/main.js",
       "electron/preload.js",
       "electron/scraper-bridge.js",
+      "shared/**/*",
       "electron/package.json",
       "package.json"
     ],
@@ -116,7 +119,7 @@
           ]
         }
       ],
-      "icon": "electron/assets/icon.ico"
+      "icon": "electron/assets/icon.png"
     },
     "linux": {
       "target": [
@@ -140,7 +143,7 @@
           ]
         }
       ],
-      "icon": "electron/assets/icon.icns",
+      "icon": "electron/assets/icon.png",
       "category": "public.app-category.education"
     },
     "nsis": {
@@ -150,7 +153,8 @@
       "createStartMenuShortcut": true
     },
     "dmg": {
-      "title": "Install AcadFlow"
+      "title": "Install AcadFlow",
+      "background": null
     }
   }
 }

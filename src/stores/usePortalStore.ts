@@ -1,12 +1,11 @@
 /**
  * stores/usePortalStore.ts
- * Manages portal capture state for the WebView + AI extraction flow.
+ * Manages portal capture state for the WebView + local table parser flow.
  *
  * Persisted fields: lastPortalUrl, syncLog
  * Transient fields: syncStatus, lastError, captureType (reset on hydration)
  *
- * Inference is fully local — Ollama on desktop, WebLLM on Android.
- * No cloud API keys are stored or managed here.
+ * Captured tables are parsed locally in the renderer.
  */
 
 import { create } from 'zustand'
@@ -36,7 +35,7 @@ interface PortalState {
 
   /**
    * Full capture flow — called from the Import page.
-   * Opens WebView -> user taps Capture -> AI extracts (local) -> writes to Dexie.
+   * Opens WebView -> user taps Capture -> local parser extracts -> writes to Dexie.
    */
   runCapture: (portalUrl: string, captureType: CaptureType, semesterId: string) => Promise<void>
 }
@@ -52,22 +51,21 @@ export const usePortalStore = create<PortalState>()(
       captureType: 'auto',
 
       // setLastPortalUrl
-      setLastPortalUrl: (url) => set({ lastPortalUrl: url }),
+      setLastPortalUrl: url => set({ lastPortalUrl: url }),
 
       // setCaptureType
-      setCaptureType: (captureType) => set({ captureType }),
+      setCaptureType: captureType => set({ captureType }),
 
       // setSyncStatus
-      setSyncStatus: (syncStatus, error?) =>
-        set({ syncStatus, lastError: error ?? null }),
+      setSyncStatus: (syncStatus, error?) => set({ syncStatus, lastError: error ?? null }),
 
       // recordSync
-      recordSync: (result) => {
+      recordSync: result => {
         const entry: SyncLogEntry = { ...result, id: crypto.randomUUID() }
         set(s => ({
           syncStatus: result.ok ? 'success' : 'error',
-          lastError:  result.ok ? null : (result.error ?? 'Unknown error'),
-          syncLog:    [entry, ...s.syncLog].slice(0, 20),
+          lastError: result.ok ? null : (result.error ?? 'Unknown error'),
+          syncLog: [entry, ...s.syncLog].slice(0, 20),
         }))
       },
 
@@ -90,17 +88,23 @@ export const usePortalStore = create<PortalState>()(
           const page = await capturePortalPage(portalUrl)
 
           if (!page.tables.trim()) {
-            setSyncStatus('error', 'No tables found on this page. Navigate to your attendance or marks page first.')
+            setSyncStatus(
+              'error',
+              'No tables found on this page. Navigate to your attendance or marks page first.'
+            )
             return
           }
 
-          // 2. Extract with local AI (Ollama on desktop, WebLLM on Android)
+          // 2. Parse captured tables locally without an inference engine.
           setSyncStatus('extracting')
-          const { extractWithAI } = await import('@/lib/scraper/ai-extractor')
-          const captureResult: CaptureResult = await extractWithAI(page.tables, captureType)
+          const { parseCapturedTables } = await import('@/lib/scraper/ai-extractor')
+          const captureResult: CaptureResult = parseCapturedTables(page.tables, captureType)
 
           if (captureResult.type === 'unknown') {
-            setSyncStatus('error', 'AI could not find academic data on this page. Navigate to attendance, marks, or subjects and try again.')
+            setSyncStatus(
+              'error',
+              'Could not identify academic data in these tables. Navigate to attendance, marks, or subjects and try again.'
+            )
             return
           }
 
@@ -109,7 +113,6 @@ export const usePortalStore = create<PortalState>()(
           const { saveToDb } = await import('@/lib/scraper/index')
           const result = await saveToDb(captureResult, semesterId)
           recordSync(result)
-
         } catch (err: any) {
           setSyncStatus('error', err?.message ?? 'Unexpected error during capture.')
         }
@@ -117,9 +120,9 @@ export const usePortalStore = create<PortalState>()(
     }),
     {
       name: 'acadflow-portal',
-      partialize: (s) => ({
+      partialize: s => ({
         lastPortalUrl: s.lastPortalUrl,
-        syncLog:       s.syncLog,
+        syncLog: s.syncLog,
       }),
       // Drop legacy configuredProviders/apiKeySet fields from old persisted state
       merge: (persisted: any, current) => {

@@ -1,0 +1,24 @@
+{
+  "name": "@acadflow/portal-capture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Native Capacitor Android WebView bridge for AcadFlow portal capture",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "node scripts/sync-capture-script.mjs && tsc -p tsconfig.json"
+  },
+  "files": [
+    "android",
+    "dist",
+    "package.json"
+  ],
+  "peerDependencies": {
+    "@capacitor/core": "^6.0.0"
+  },
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  }
+}

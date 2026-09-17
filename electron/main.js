@@ -143,29 +143,10 @@ function createWindow() {
  * The capture button injected into the portal page stores its payload in
  * window._afCapturePayload. We poll for it every 800ms after the page settles.
  */
-const INJECT_BUTTON_SCRIPT = `
-(function() {
-  if (document.getElementById('af-capture-btn')) return 'already_injected';
-  var btn = document.createElement('button');
-  btn.id = 'af-capture-btn';
-  btn.innerHTML = '&#128229; Capture';
-  btn.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:2147483647;background:#6C63FF;color:#fff;border:none;border-radius:24px;padding:12px 22px;font-size:15px;font-weight:700;font-family:system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 20px rgba(108,99,255,0.55);user-select:none;transition:opacity 0.2s;';
-  btn.addEventListener('click', function() {
-    btn.innerHTML = '&#8987; Capturing...';
-    btn.disabled = true;
-    try {
-      var iframe = document.querySelector('iframe');
-      var doc = (iframe && iframe.contentDocument) ? iframe.contentDocument : document;
-      var tables = Array.prototype.map.call(doc.querySelectorAll('table'), function(t) { return t.outerHTML; }).join('\\n');
-      window._afCapturePayload = JSON.stringify({ url: window.location.href, title: document.title, tables: tables });
-      btn.innerHTML = '&#10003; Captured!';
-      btn.style.background = '#2ED573';
-    } catch(e) { btn.innerHTML = '&#128229; Capture'; btn.disabled = false; }
-  });
-  document.body.appendChild(btn);
-  return 'injected';
-})()
-`
+const INJECT_BUTTON_SCRIPT = require('fs').readFileSync(
+  path.join(__dirname, '..', 'shared', 'capture-button-script.js'),
+  'utf8'
+)
 
 const POLL_SCRIPT = `(function(){ var p = window._afCapturePayload; window._afCapturePayload = null; return p || null; })()`
 

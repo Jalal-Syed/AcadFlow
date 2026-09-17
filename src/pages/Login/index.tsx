@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Mail, CheckCircle2, Loader2, Zap, AlertCircle } from 'lucide-react'
+import { Mail, CheckCircle2, Loader2, Zap, AlertCircle, LockKeyhole } from 'lucide-react'
 import { useAuthStore } from '@/stores/useAuthStore'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -9,11 +9,16 @@ import Input from '@/components/ui/Input'
 // ---------------------------------------------------------------------------
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithEmail, magicLinkSentTo, clearMagicLinkSent } = useAuthStore()
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithPassword, magicLinkSentTo, clearMagicLinkSent } = useAuthStore()
 
   const [email, setEmail] = useState('')
   const [emailLoading, setEmailLoading] = useState(false)
+  const [passwordLoading, setPasswordLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [authMode, setAuthMode] = useState<'password' | 'magic'>('password')
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirmationSent, setConfirmationSent] = useState(false)
   const [error, setError] = useState('')
 
   const isElectron = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent)
@@ -46,6 +51,25 @@ export default function LoginPage() {
       setError('Failed to send magic link. Check your email address and try again.')
     } finally {
       setEmailLoading(false)
+    }
+  }
+
+  const handlePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email.trim() || password.length < 6) return
+    setError('')
+    setPasswordLoading(true)
+    try {
+      if (isSignUp) {
+        const result = await signUpWithEmail(email.trim(), password)
+        setConfirmationSent(result.requiresConfirmation)
+      } else {
+        await signInWithPassword(email.trim(), password)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed. Please try again.')
+    } finally {
+      setPasswordLoading(false)
     }
   }
 
@@ -172,28 +196,40 @@ export default function LoginPage() {
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
         </div>
 
-        {/* Email magic link */}
-        <form onSubmit={handleEmail} className="space-y-3">
-          <Input
-            type="email"
-            label="Email address"
-            placeholder="you@example.com"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            disabled={emailLoading || googleLoading}
-            required
-          />
-          <Button
-            type="submit"
-            variant="secondary"
-            fullWidth
-            loading={emailLoading}
-            disabled={googleLoading || !email.trim()}
-          >
-            {!emailLoading && <Mail size={16} />}
-            Send magic link
+        <div className="flex gap-2">
+          <Button variant={authMode === 'password' ? 'secondary' : 'ghost'} size="sm" fullWidth onClick={() => setAuthMode('password')}>
+            <LockKeyhole size={15} /> Password
           </Button>
-        </form>
+          <Button variant={authMode === 'magic' ? 'secondary' : 'ghost'} size="sm" fullWidth onClick={() => setAuthMode('magic')}>
+            <Mail size={15} /> Magic link
+          </Button>
+        </div>
+
+        {authMode === 'password' ? (
+          <form onSubmit={handlePassword} className="space-y-3">
+            <Input type="email" label="Email address" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} disabled={passwordLoading || googleLoading} required />
+            <Input type="password" label="Password" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} disabled={passwordLoading || googleLoading} minLength={6} required />
+            <Button type="submit" variant="secondary" fullWidth loading={passwordLoading} disabled={googleLoading || !email.trim() || password.length < 6}>
+              {isSignUp ? 'Create account' : 'Sign in'}
+            </Button>
+            <button type="button" className="w-full text-xs" style={{ color: 'rgb(var(--color-primary))' }} onClick={() => setIsSignUp(value => !value)}>
+              {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+            </button>
+            {confirmationSent && (
+              <p className="text-xs text-center" style={{ color: '#2ED573' }}>
+                Check your inbox to confirm your account, then sign in here.
+              </p>
+            )}
+          </form>
+        ) : (
+          <form onSubmit={handleEmail} className="space-y-3">
+            <Input type="email" label="Email address" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} disabled={emailLoading || googleLoading} required />
+            <Button type="submit" variant="secondary" fullWidth loading={emailLoading} disabled={googleLoading || !email.trim()}>
+              {!emailLoading && <Mail size={16} />}
+              Send magic link
+            </Button>
+          </form>
+        )}
 
         {/* Electron note — OAuth redirect requires external browser */}
         {isElectron && (

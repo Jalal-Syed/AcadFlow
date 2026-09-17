@@ -30,10 +30,11 @@ async function initCapacitor() {
   const { App: CapApp } = await import('@capacitor/app')
   CapApp.addListener('appUrlOpen', ({ url }) => {
     if (url.startsWith('acadflow://auth/callback')) {
-      // Extract the fragment/query Supabase appended and navigate to the callback route.
-      // BrowserRouter is in use on Android, so we push to the history directly.
-      const hash = url.split('acadflow://auth/callback').pop() ?? ''
-      window.location.href = `/auth/callback${hash}`
+      // Keep the callback inside the native WebView. The custom URL may carry
+      // either a PKCE query or an implicit-flow hash.
+      const callback = url.split('acadflow://auth/callback').pop() ?? ''
+      window.history.replaceState({}, '', `/auth/callback${callback}`)
+      window.dispatchEvent(new PopStateEvent('popstate'))
     }
   })
   CapApp.addListener('appStateChange', (_state) => {

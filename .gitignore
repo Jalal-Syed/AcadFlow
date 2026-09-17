@@ -14,6 +14,14 @@ dist-ssr/
 # Capacitor / Android
 android/
 ios/
+.gradle/
+android/.gradle/
+android/build/
+android/app/build/
+android/.cxx/
+*.apk
+*.aab
+plugins/portal-capture/dist/
 
 # Electron build output
 release-builds/
@@ -22,6 +30,7 @@ release-builds/
 electron/assets/*.ico
 electron/assets/*.icns
 electron/assets/*.png
+!electron/assets/icon.png
 
 # Editor
 .vscode/

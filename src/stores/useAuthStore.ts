@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { User, Session } from '@supabase/supabase-js'
+import { Capacitor } from '@capacitor/core'
 import { supabase } from '@/lib/supabase'
 
 // ---------------------------------------------------------------------------
@@ -21,9 +22,9 @@ interface AuthState {
   initialize: () => () => void
 
   signInWithGoogle: () => Promise<void>
-  // Sends a magic link to the email. Does NOT sign the user in immediately —
-  // the user clicks the link in their inbox and lands on /auth/callback.
   signInWithEmail: (email: string) => Promise<void>
+  signUpWithEmail: (email: string, password: string) => Promise<{ requiresConfirmation: boolean }>
+  signInWithPassword: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   clearMagicLinkSent: () => void
 }
@@ -80,9 +81,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         ;(window as unknown as { authBridge: { openExternal: (url: string) => void } })
           .authBridge.openExternal(data.url)
       }
+    } else if (Capacitor.isNativePlatform()) {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: 'acadflow://auth/callback' },
+      })
     } else {
-      // Web / PWA / Android: standard redirect flow.
-      // Supabase redirects back to this origin after Google auth.
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -93,7 +97,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   // ── Email magic link ──────────────────────────────────────────────────────
   signInWithEmail: async (email: string) => {
     const isElectron = typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent)
-    const redirectTo = isElectron
+    const redirectTo = isElectron || Capacitor.isNativePlatform()
       ? 'acadflow://auth/callback'
       : `${window.location.origin}/auth/callback`
 
@@ -105,6 +109,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (error) throw error
 
     set({ magicLinkSentTo: email })
+  },
+
+  signUpWithEmail: async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) throw error
+    return { requiresConfirmation: !data.session }
+  },
+
+  signInWithPassword: async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
   },
 
   // ── Sign out ──────────────────────────────────────────────────────────────
